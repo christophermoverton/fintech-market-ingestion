@@ -17,7 +17,7 @@ class AlpacaConfig:
     data_base_url: str = "https://data.alpaca.markets"
     feed: str = "iex"
     max_retries: int = 5
-    ttimeout_s: int = 30
+    timeout_s: int = 30
     backoff_base_s: float = 1.0
     backoff_max_s: float = 30.0
     
@@ -35,8 +35,10 @@ class AlpacaMarketDataClient:
         self.cfg = cfg
         self.session = requests.Session()
         self.session.headers.update(
+            {
             "APCA-API-KEY-ID": cfg.api_key_id,
             "APCA-API-SECRET-KEY": cfg.api_secret_key,
+            }
         )
     
     @staticmethod
@@ -133,7 +135,7 @@ class AlpacaMarketDataClient:
         }
         
         all_rows: List[Dict[str,Any]] = []
-        page_token = Optional[str] = None
+        page_token: Optional[str] = None
         
         while True:
             if page_token:
