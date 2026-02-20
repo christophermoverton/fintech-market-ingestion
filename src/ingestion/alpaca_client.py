@@ -146,7 +146,7 @@ class AlpacaMarketDataClient:
             payload = self._request_with_retries(url, params=params)
 
             # Alpaca returns list under "bars" and pagination under "next_page_token"
-            bars = payload.get("bars", [])
+            bars = payload.get("bars") or []
             all_rows.extend(bars)
 
             page_token = payload.get("next_page_token")

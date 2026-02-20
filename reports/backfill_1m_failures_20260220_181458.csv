@@ -1,0 +1,6 @@
+symbol,date,error
+AAPL,2026-02-01,'NoneType' object is not iterable
+MSFT,2026-02-01,'NoneType' object is not iterable
+NVDA,2026-02-01,'NoneType' object is not iterable
+AMZN,2026-02-01,'NoneType' object is not iterable
+GOOGL,2026-02-01,'NoneType' object is not iterable
