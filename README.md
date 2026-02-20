@@ -155,5 +155,9 @@ DuckDB Analytics
 
 ---
 
+## Example Usage for backfill_daily.py for data ingestion
 
+```python
+python -m src.ingestion.backfill_daily --start 2023-01-01 --end 2026-01-01
+```
 
