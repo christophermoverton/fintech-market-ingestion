@@ -334,4 +334,198 @@ Re-running the same date range:
 
 ---
 
+> ## Data Quality & Validation (QA Layer)
+
+---
+
+# Data Quality & Validation (QA Layer)
+
+This repository includes a QA module that validates curated market data (daily and 1-minute bars) after any backfill or ingestion run.
+
+The QA layer ensures:
+
+* Primary key uniqueness
+* OHLC integrity
+* Timestamp ordering
+* Coverage gap detection
+* Repeatable, exportable reporting
+* Optional strict enforcement mode
+
+---
+
+## Supported Datasets
+
+| Timeframe  | Path                                   |
+| ---------- | -------------------------------------- |
+| Daily (1D) | `data/curated/bars_daily/**/*.parquet` |
+| 1-Minute   | `data/curated/bars_1m/**/*.parquet`    |
+
+Canonical schema expected:
+
+```
+symbol, ts_utc, open, high, low, close, volume, source, timeframe
+```
+
+Primary key:
+
+```
+(symbol, ts_utc, timeframe)
+```
+
+---
+
+## QA Checks Implemented
+
+###  Duplicate Detection (Primary Key Integrity)
+
+Detects duplicate rows on:
+
+```
+(symbol, ts_utc, timeframe)
+```
+
+* Reports duplicates per symbol
+* Writes detailed duplicate file if found
+* Fails in `--strict` mode
+
+---
+
+###  OHLC Integrity Rules
+
+Validates:
+
+* `high >= max(open, close)`
+* `low <= min(open, close)`
+* `high >= low`
+* `open, high, low, close > 0`
+* `volume >= 0`
+* Required fields non-null
+
+Reports:
+
+* Violations by rule + symbol
+* Sample offending rows (configurable size)
+
+---
+
+###  Timestamp Sanity
+
+* Ensures `ts_utc` is non-null
+* Detects out-of-order timestamps per symbol
+* Counts ordering violations
+
+---
+
+###  Coverage / Gap Detection
+
+#### Daily (1D)
+
+* Business-day approximation between min/max date
+* Reports missing business days per symbol
+
+#### 1-Minute (1Min)
+
+* Approximate expected = 390 minutes per regular session
+* Computes missing minutes per symbol/day
+* Aggregates total missing minutes per symbol
+
+> Note: 1-minute gap detection uses a 390-minute session approximation.
+> Early closes and holidays may increase gap counts.
+> Calendar-aware refinement is planned.
+
+---
+
+## CLI Usage
+
+Run QA for daily data:
+
+```bash
+python -m src.ingestion.quality --timeframe 1D
+```
+
+Run QA for 1-minute data:
+
+```bash
+python -m src.ingestion.quality --timeframe 1Min
+```
+
+Run QA for both datasets:
+
+```bash
+python -m src.ingestion.quality --timeframe all
+```
+
+Enable strict enforcement:
+
+```bash
+python -m src.ingestion.quality --timeframe all --strict
+```
+
+Options:
+
+```
+--sample-n 50
+--max-ohlc-violations 0
+```
+
+---
+
+## Reports Generated
+
+Always:
+
+```
+reports/qa_summary.csv
+```
+
+Conditional:
+
+```
+reports/qa_duplicates.csv
+reports/qa_ohlc_violations.csv
+reports/qa_ohlc_violations_samples.csv
+reports/qa_gaps_daily.csv
+reports/qa_gaps_1m.csv
+```
+
+The QA summary includes:
+
+* symbol
+* timeframe
+* min_ts / max_ts
+* row_count
+* duplicate_keys
+* ohlc_violation_count
+* gap_count
+* out_of_order_count
+* last_updated
+
+---
+
+## Strict Mode Behavior
+
+When `--strict` is enabled:
+
+The process exits non-zero if:
+
+* Duplicate primary keys exist
+* OHLC violations exceed threshold
+* Canonical schema columns are missing
+
+This enables:
+
+* CI enforcement
+* Automated gating before backtests
+* Safe production deployment
+
+---
+
+## Architecture Notes
+
+* Uses DuckDB to query Parquet directly (fast, memory-efficient)
+* Pandas used only for formatting and report export
+* Designed to be idempotent and repeatable
+
+---
+
 
