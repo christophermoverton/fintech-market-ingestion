@@ -301,6 +301,8 @@ def compute_gaps_1m(con: duckdb.DuckDBPyConnection, cfg: QAConfig) -> pd.DataFra
     df["missing_minutes"] = (expected - df["rows"]).clip(lower=0)
     return df.sort_values(["missing_minutes","symbol","date"], ascending=[False,True,True])
 
+
+
 #-----------------------------
 # Runner / Report Writer
 #-----------------------------
