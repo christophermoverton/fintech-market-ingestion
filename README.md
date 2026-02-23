@@ -529,3 +529,133 @@ This enables:
 ---
 
 
+# QA Summary Export (Framework-Level Observability)
+
+The repository includes a framework-level QA export that produces structured dataset health reports per run.
+
+Exports are written to:
+
+```
+artifacts/qa/<run_id>/
+  qa_summary_by_symbol.csv
+  qa_summary_global.csv
+```
+
+These reports provide deterministic, reproducible observability across daily and 1-minute datasets.
+
+---
+
+## Gap Detection (Updated – Session-Aware Logic)
+
+### 1-Minute Bars
+
+Gap metrics are computed using timestamp deltas within each `(symbol, session_date)`:
+
+* `gap_count` → total missing minutes implied by consecutive bars
+* `gap_segments` → number of contiguous missing-minute sequences
+* `max_gap_len` → largest missing-minute streak
+
+This logic:
+
+* Partitions by `(symbol, date)`
+* Computes minute differences between consecutive bars
+* Prevents overnight and weekend closures from being counted as gaps
+
+This replaces the earlier 390-minute-per-day approximation and eliminates artificial inflation from session boundaries.
+
+---
+
+## Coverage Metrics
+
+Coverage is calculated as:
+
+```
+coverage_pct = rows_observed / expected_bars
+```
+
+Where:
+
+* Daily expected bars = trading sessions in window
+* 1-Min expected bars = session minutes (calendar-aware if available)
+* Falls back to business-day approximations if no calendar library is installed
+
+### Important Note on IEX Feed
+
+For 1-minute data using the Alpaca IEX feed:
+
+* Not every minute may contain a trade
+* Missing bars may reflect feed scope rather than structural corruption
+
+Coverage thresholds should be tuned accordingly for intraday datasets.
+
+---
+
+## Global Summary Report
+
+`qa_summary_global.csv` includes:
+
+* total_rows
+* unique_rows
+* duplicate_rows
+* total_gap_count
+* total_ohlc_violation_count
+* pct_symbols_below_coverage_threshold
+* overall_status (PASS / WARN / FAIL)
+
+Status evaluation:
+
+* **FAIL** → duplicates or OHLC violations exceed thresholds
+* **WARN** → coverage or gap thresholds exceeded
+* **PASS** → all checks within limits
+
+---
+
+## Deterministic Artifact Design
+
+Each QA run produces a deterministic artifact directory:
+
+```
+artifacts/qa/<run_id>/
+```
+
+Run IDs are derived from:
+
+```
+dataset_name + interval + start_ts + end_ts + calendar
+```
+
+This ensures:
+
+* Reproducibility
+* Auditability
+* CI compatibility
+* Historical comparability
+
+---
+
+## Why This Matters
+
+Backtests are only as reliable as the bars beneath them.
+
+The QA Summary Export now provides:
+
+* Structural integrity validation
+* Session-aware intraday gap detection
+* Calendar-aware coverage metrics
+* Deterministic PASS/WARN/FAIL evaluation
+* Audit-grade artifact output
+
+This moves the project from simple validation to a structured data observability framework.
+
+---
+
+## Optional Enhancement (Future Work)
+
+* Fully session-aware expected-minute index comparison
+* Extended-hours handling
+* Per-run historical QA trend table
+* Machine-readable JSON summary export
+* CI auto-fail based on `qa_summary_global.csv`
+
+
+
