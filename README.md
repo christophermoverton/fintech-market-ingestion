@@ -657,5 +657,181 @@ This moves the project from simple validation to a structured data observability
 * Machine-readable JSON summary export
 * CI auto-fail based on `qa_summary_global.csv`
 
+---
+
+# M2 – Data Quality & Observability
+
+This milestone upgrades the ingestion pipeline from passive QA reporting to **production-grade guardrail enforcement** suitable for trading systems and CI environments.
+
+The QA framework now consists of three distinct layers:
+
+```
+QA Architecture
+
+qa_export.py      → Computes metrics and writes QA artifacts
+qa_enforcer.py    → Enforces strict integrity thresholds
+CLI (--strict)    → Enables pipeline-failing guardrails
+```
+
+---
+
+## Strict QA Mode (Guardrail Enforcement)
+
+The pipeline supports a `--strict` mode that converts QA from observational reporting into enforceable production safeguards.
+
+When enabled:
+
+* Duplicate primary keys cause pipeline failure
+* OHLC violations cause pipeline failure
+* Exit code = 1 (CI-compatible)
+* Failure summary printed with top offending symbols
+* QA artifacts are still written for debugging
+
+---
+
+### Why Strict Mode Matters (Trading Context)
+
+In algorithmic trading systems:
+
+* Duplicate bars distort indicators (EMA, RSI, VWAP, etc.)
+* OHLC violations corrupt backtests
+* Silent data drift can invalidate signal research
+* Integrity failures must never reach modeling or execution layers
+
+Strict mode guarantees:
+
+> No corrupted bars reach downstream signal generation.
+
+---
+
+## CLI Usage
+
+### Observability Mode (Default)
+
+Exports QA artifacts but never fails the pipeline.
+
+```bash
+python -m src.ingestion.qa_export \
+  --timeframe all \
+  --start 2025-11-01 \
+  --end 2025-12-01
+```
+
+---
+
+### Strict Enforcement Mode
+
+Fails the pipeline if integrity thresholds are exceeded.
+
+```bash
+python -m src.ingestion.qa_export \
+  --timeframe all \
+  --start 2025-11-01 \
+  --end 2025-12-01 \
+  --strict \
+  --max-duplicate-keys 0 \
+  --max-ohlc-violations 0
+```
+
+Exit Codes:
+
+| Mode | Condition                               | Exit Code |
+| ---- | --------------------------------------- | --------- |
+| PASS | Within thresholds                       | 0         |
+| WARN | Non-strict integrity or coverage issues | 0         |
+| FAIL | Strict integrity violation              | 1         |
+
+---
+
+## QA Artifacts
+
+QA outputs are written to:
+
+```
+artifacts/qa/<run_id>/
+```
+
+Examples:
+
+```
+qa_bars_daily_1D_2025-11-01_2025-12-01_XNYS/
+qa_bars_1m_1Min_2025-11-01_2025-12-01_XNYS/
+```
+
+Each run directory contains:
+
+* `qa_summary_by_symbol.csv`
+* `qa_summary_global.csv`
+
+---
+
+## Enforced Integrity Rules (Strict Mode)
+
+Primary enforcement checks:
+
+* **Duplicate primary keys**
+  `(symbol, ts_utc, timeframe)`
+  Zero tolerance by default.
+
+* **OHLC violations**
+  Invalid price relationships or corrupted fields.
+
+Optional (configurable in future extensions):
+
+* Coverage thresholds
+* Gap thresholds
+* Missing symbol enforcement
+
+---
+
+## Clean Separation of Responsibilities
+
+| Module           | Responsibility                            |
+| ---------------- | ----------------------------------------- |
+| `qa_export.py`   | Computes QA metrics and exports artifacts |
+| `qa_enforcer.py` | Applies strict threshold policy           |
+| CLI `--strict`   | Enables guardrail enforcement             |
+| Exit Code        | Controlled only by enforcer               |
+
+This separation ensures:
+
+* Testable enforcement logic
+* Reusable QA artifacts
+* CI-ready behavior
+* Clear architectural boundaries
+
+---
+
+## CI Integration Example
+
+```yaml
+- name: Strict QA
+  run: |
+    python -m src.ingestion.qa_export \
+      --timeframe all \
+      --start 2025-11-01 \
+      --end 2025-12-01 \
+      --strict \
+      --max-duplicate-keys 0 \
+      --max-ohlc-violations 0
+```
+
+If integrity is violated, the CI job fails automatically.
+
+---
+
+## M2 Status
+
+* Deterministic primary key enforcement
+* OHLC integrity validation
+* Calendar-aware coverage metrics
+* Gap detection (1D and 1Min)
+* Strict guardrail mode
+* CI-compatible exit codes
+* Artifact-based observability
+
+This milestone transitions the pipeline from QA reporting to production-grade enforcement suitable for research and trading workflows.
+
+---
 
 
