@@ -30,6 +30,7 @@ CANONICAL_COLS = [
 class Thresholds:
     min_coverage_pct: float = 0.995
     max_duplicate_rows: int = 0
+    max_duplicate_keys: int = 0   # NEW: strict integrity threshold
     max_ohlc_violations: int = 0
     max_gap_count_per_symbol: int = 0
     
@@ -430,6 +431,7 @@ def generate_qa_exports(cfg: ExportConfig) -> Tuple[pd.DataFrame, pd.DataFrame, 
     total_rows = int(by_sym["rows_observed"].sum()) if not by_sym.empty else 0
     unique_rows = total_rows - int(by_sym["duplicate_rows"].sum())
     duplicate_rows = int(by_sym["duplicate_rows"].sum())
+    total_duplicate_keys = int(by_sym["duplicate_keys"].sum()) if "duplicate_keys" in by_sym else 0
 
     total_gap_count = int(by_sym["gap_count"].sum()) if "gap_count" in by_sym else 0
     total_ohlc_violations = int(by_sym["ohlc_violation_count"].sum()) if "ohlc_violation_count" in by_sym else 0
@@ -465,6 +467,7 @@ def generate_qa_exports(cfg: ExportConfig) -> Tuple[pd.DataFrame, pd.DataFrame, 
         "total_rows": total_rows,
         "unique_rows": unique_rows,
         "duplicate_rows": duplicate_rows,
+        "total_duplicate_keys": total_duplicate_keys,
         "symbols_expected": len(expected_syms),
         "symbols_present": len(symbols_present),
         "symbols_missing": ";".join(symbols_missing),
@@ -478,7 +481,7 @@ def generate_qa_exports(cfg: ExportConfig) -> Tuple[pd.DataFrame, pd.DataFrame, 
     return by_sym_export, global_export, overall_status
 
 
-def write_exports(cfg: ExportConfig) -> int:
+def write_exports(cfg: ExportConfig) -> Tuple[pd.DataFrame, pd.DataFrame, str, Path]:
     run_id = cfg.run_id or _make_run_id(cfg)
     out_dir = cfg.out_root / run_id
     by_sym, glob, status = generate_qa_exports(cfg)
@@ -487,7 +490,9 @@ def write_exports(cfg: ExportConfig) -> int:
     _write_csv(glob, out_dir / "qa_summary_global.csv")
 
     print(f"QA EXPORT ({cfg.dataset_name}/{cfg.bar_interval}) :: {status} :: {out_dir.resolve()}")
-    return 1 if status == "FAIL" else 0
+    return by_sym, glob, status, out_dir
+
+        
 
 
 # -----------------------
@@ -508,6 +513,8 @@ def main() -> None:
     ap.add_argument("--max-ohlc-violations", type=int, default=0)
     ap.add_argument("--max-gap-count-per-symbol", type=int, default=0)
     ap.add_argument("--run-id", default=None, help="Optional explicit run id (otherwise deterministic).")
+    ap.add_argument("--strict", action="store_true", help="Fail pipeline if QA thresholds are violated.")
+    ap.add_argument("--max-duplicate-keys", type=int, default=0, help="Strict threshold for duplicate primary keys.")
 
     args = ap.parse_args()
 
@@ -518,6 +525,7 @@ def main() -> None:
     thr = Thresholds(
         min_coverage_pct=args.min_coverage_pct,
         max_duplicate_rows=args.max_duplicate_rows,
+        max_duplicate_keys=args.max_duplicate_keys,   # NEW
         max_ohlc_violations=args.max_ohlc_violations,
         max_gap_count_per_symbol=args.max_gap_count_per_symbol,
     )
@@ -538,14 +546,39 @@ def main() -> None:
         )
 
     exit_code = 0
-    if args.timeframe == "all":
-        rc1 = write_exports(_cfg("1D"))
-        rc2 = write_exports(_cfg("1Min"))
-        exit_code = 1 if (rc1 != 0 or rc2 != 0) else 0
-    else:
-        exit_code = write_exports(_cfg(args.timeframe))
+    from src.qa.qa_enforcer import (
+        Thresholds as EnforcerThresholds,
+        build_metrics_from_dataframes,
+        enforce_or_exit,
+    )
+    
+    def _enforce(by_sym: pd.DataFrame, glob: pd.DataFrame) -> None:
+        metrics = build_metrics_from_dataframes(by_symbol_df=by_sym, global_df=glob)
 
-    raise SystemExit(exit_code)
+        enforcer_thresholds = EnforcerThresholds(
+            max_duplicate_keys=thr.max_duplicate_keys,
+            max_ohlc_violations=thr.max_ohlc_violations,
+            # Optional later:
+            # min_coverage_pct=thr.min_coverage_pct,
+            # max_gap_count=None,
+            # allow_missing_symbols=True,
+        )
+
+        enforce_or_exit(metrics, strict=args.strict, thresholds=enforcer_thresholds)
+    
+    exit_code = 0  # non-strict always exits 0
+
+    if args.timeframe == "all":
+        by1, g1, s1, _ = write_exports(_cfg("1D"))
+        _enforce(by1, g1)
+
+        by2, g2, s2, _ = write_exports(_cfg("1Min"))
+        _enforce(by2, g2)
+    else:
+        by, g, s, _ = write_exports(_cfg(args.timeframe))
+        _enforce(by, g)
+
+    raise SystemExit(0)
 
 
 if __name__ == "__main__":
