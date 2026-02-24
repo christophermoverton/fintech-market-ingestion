@@ -835,3 +835,137 @@ This milestone transitions the pipeline from QA reporting to production-grade en
 ---
 
 
+## DuckDB Sanity Queries (Post-Ingestion Contract Test)
+
+After curated ingestion completes, the repository includes a DuckDB-based validation notebook that verifies dataset integrity directly over Parquet files (no intermediate pandas loading).
+
+**Notebook:**
+`notebooks/01_duckdb_sanity_queries.ipynb`
+
+### Purpose
+
+This notebook acts as the first **analytics contract test** in the pipeline:
+
+```
+Ingestion → Curated Parquet → DuckDB Validation → QA → Research / Modeling
+```
+
+It ensures curated datasets are:
+
+* Readable via DuckDB over globbed partitions
+* Internally consistent
+* Free of duplicate primary keys
+* Valid under basic OHLC and volume constraints
+* Immediately usable for analytics
+
+---
+
+## What It Validates
+
+### 1. Dataset Discovery & Schema Checks
+
+Queries Parquet directly:
+
+```
+data/curated/bars_daily/**/*.parquet
+data/curated/bars_1m/**/*.parquet
+```
+
+Verifies:
+
+* Expected columns exist (`symbol`, `ts_utc`, `open`, `high`, `low`, `close`, `volume`, `timeframe`)
+* Timestamp parsing behaves correctly (UTC enforced)
+
+---
+
+### 2. Coverage & Completeness
+
+Produces a per-symbol coverage table:
+
+| symbol | min_ts | max_ts | n_rows | most_recent_date |
+| ------ | ------ | ------ | ------ | ---------------- |
+
+Also computes:
+
+* Total row counts
+* Most recent timestamp per symbol
+* Symbol coverage distribution
+
+---
+
+### 3. Duplicate Detection (Primary Key Contract)
+
+Validates uniqueness of:
+
+```
+(symbol, ts_utc, timeframe)
+```
+
+Any offenders are surfaced explicitly.
+Expected result: **empty table**.
+
+---
+
+### 4. Basic Validity Constraints
+
+Counts rows violating:
+
+* `close <= 0`
+* `volume < 0`
+* `high < GREATEST(open, close)`
+* `low > LEAST(open, close)`
+
+These checks reinforce OHLC integrity before downstream analytics.
+
+---
+
+### 5. Analytics Demonstration (DuckDB Window Functions)
+
+To prove the dataset is analytically viable, the notebook includes:
+
+* Daily returns via `LAG(close)`
+* 20-day rolling volatility using `STDDEV_SAMP`
+* “Top 10 Most Volatile Symbols” (recent window)
+
+This demonstrates:
+
+* Partitioned window functions
+* Symbol-level analytics
+* Time-series readiness
+
+---
+
+## Output Artifact
+
+The notebook exports a consolidated summary:
+
+```
+reports/duckdb_sanity_summary.csv
+```
+
+This file contains:
+
+* Dataset name
+* Row counts
+* Symbol counts
+* Duplicate count
+* Basic validity violation counts
+* Timestamp of run
+
+---
+
+## Why This Matters
+
+This notebook strengthens the ingestion architecture by ensuring:
+
+* Curated Parquet is immediately queryable
+* Schema drift is detectable
+* Primary key enforcement is validated
+* Downstream modeling will not inherit silent data corruption
+
+It formalizes the **analytics handoff layer** between ingestion and strategy research.
+
+---
+
+
+
