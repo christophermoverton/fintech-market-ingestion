@@ -967,5 +967,118 @@ It formalizes the **analytics handoff layer** between ingestion and strategy res
 
 ---
 
+#  Dataset Coverage Metrics (M2 – Data Quality & Observability)
+
+As part of **M2 – Data Quality & Observability**, the pipeline now includes formalized, calendar-aware dataset coverage reporting.
+
+Coverage metrics are exported per run and archived under:
+
+```id="p9r7mx"
+artifacts/qa/<run_dir>/qa_coverage_by_symbol.csv
+```
+
+---
+
+## Purpose
+
+Coverage metrics validate dataset completeness before modeling, backtesting, or downstream analytics.
+
+This allows the system to:
+
+* Detect partial ingestion
+* Identify stale symbols
+* Surface calendar mismatches
+* Prevent silent data truncation
+* Track coverage regression across runs
+
+Coverage reporting operates independently of gap metrics and OHLC checks, providing a higher-level day-based completeness signal.
+
+---
+
+## Per-Symbol Coverage Fields
+
+Each symbol includes:
+
+| Field               | Description                                                    |
+| ------------------- | -------------------------------------------------------------- |
+| `min_ts`            | Earliest record timestamp within the QA slice                  |
+| `max_ts`            | Most recent record timestamp within the QA slice               |
+| `rows_total`        | Total records for the symbol in the slice                      |
+| `expected_days`     | Trading/calendar days expected between `start_ts` and `end_ts` |
+| `observed_days`     | Distinct days present in the dataset                           |
+| `missing_day_count` | `expected_days - observed_days`                                |
+| `coverage_days_pct` | `observed_days / expected_days`                                |
+| `calendar_mode`     | Calendar used to compute expected days                         |
+
+---
+
+## Calendar Modes
+
+Coverage supports configurable calendar logic:
+
+* **XNYS (default)**
+  Uses official NYSE trading sessions.
+
+* **WEEKDAY**
+  Monday–Friday only.
+
+* **ALL_DAYS**
+  Every calendar day.
+
+Calendar mode is recorded in the coverage artifact for auditability.
+
+---
+
+## Implementation Notes
+
+* Coverage slicing is performed using:
+
+  ```sql
+  CAST(ts_utc AS DATE)
+  ```
+
+  This avoids timezone boundary issues when timestamps are stored as `TIMESTAMPTZ`.
+
+* Coverage operates on day-level completeness.
+
+* Intraday bar gaps are handled separately via gap metrics.
+
+---
+
+## Artifact Schema (Stable)
+
+```id="jq1u8o"
+run_id
+dataset_name
+bar_interval
+calendar_mode
+start_ts
+end_ts
+symbol
+min_ts
+max_ts
+rows_total
+expected_days
+observed_days
+missing_day_count
+coverage_days_pct
+notes
+```
+
+Column order is stable across runs.
+
+---
+
+## Why This Matters
+
+Coverage metrics recently surfaced a partition overwrite issue in the daily backfill process, demonstrating:
+
+* The QA layer can detect silent data loss.
+* Storage and ingestion regressions are observable.
+* Dataset completeness is now formally enforced and exportable.
+
+Coverage reporting strengthens the ingestion → QA → analytics contract and is required for strict mode enforcement.
+
+---
 
 
