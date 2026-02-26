@@ -472,6 +472,7 @@ def generate_qa_exports(cfg: ExportConfig) -> Tuple[pd.DataFrame, pd.DataFrame, 
         symbols_expected=cfg.symbols_expected,   # optional list
     )
     artifact_dir = cfg.out_root / run_id
+    artifact_dir.mkdir(parents=True, exist_ok=True)  
     coverage_out = f"{artifact_dir}/qa_coverage_by_symbol.csv"
     write_coverage_csv(coverage_df, coverage_out)
 
