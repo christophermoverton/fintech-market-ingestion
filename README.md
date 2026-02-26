@@ -22,7 +22,7 @@ DuckDB Analytics + QA Observability
 
 ## Current Capabilities
 
-### ✅ Alpaca Historical Market Data Client
+###  Alpaca Historical Market Data Client
 
 * Auth via `.env`
 * Supports: `symbol`, `start`, `end`, `timeframe` (`1Day`, `1Min`), `feed` (default: `iex`)
@@ -34,7 +34,7 @@ DuckDB Analytics + QA Observability
   * network timeouts
 * Returns results as a pandas DataFrame
 
-### ✅ Windowed Daily Backfill Pipeline
+###  Windowed Daily Backfill Pipeline
 
 * Iterates over a 50-ticker universe
 * Fetches daily bars in monthly windows
@@ -51,7 +51,7 @@ DuckDB Analytics + QA Observability
   ```
 * Safe to re-run (idempotent)
 
-### ✅ Windowed 1-Minute Backfill Pipeline
+###  Windowed 1-Minute Backfill Pipeline
 
 * Day-windowed ingestion for intraday OHLCV bars
 * Failure isolation per (symbol, date)
@@ -62,13 +62,13 @@ DuckDB Analytics + QA Observability
   data/curated/bars_1m/symbol=XYZ/date=YYYY-MM-DD/
   ```
 
-### ✅ Partitioned Parquet Storage
+###  Partitioned Parquet Storage
 
 * Implemented via `pyarrow.write_to_dataset`
 * Uses `delete_matching` to safely overwrite partitions
 * DuckDB-compatible queries over glob paths
 
-### ✅ QA Layer + Artifact-Based Observability (M2)
+###  QA Layer + Artifact-Based Observability (M2)
 
 * Duplicate primary key detection
 * OHLC integrity checks
@@ -87,6 +87,116 @@ DuckDB Analytics + QA Observability
 
 ---
 
+# QA Export CLI Usage
+
+The repository includes a framework-level QA export command that computes integrity metrics and writes deterministic artifacts per run.
+
+Artifacts are written to:
+
+```
+artifacts/qa/<run_id>/
+  qa_summary_by_symbol.csv
+  qa_summary_global.csv
+  qa_coverage_by_symbol.csv
+```
+
+---
+
+## Observability Mode (Default)
+
+Exports QA metrics but does **not** fail the pipeline.
+
+```bash
+python -m src.ingestion.qa_export \
+  --timeframe all \
+  --start 2025-11-01 \
+  --end 2025-12-01
+```
+
+You may also run for a single timeframe:
+
+### Daily Only
+
+```bash
+python -m src.ingestion.qa_export \
+  --timeframe 1D \
+  --start 2025-11-01 \
+  --end 2025-12-01
+```
+
+### 1-Minute Only
+
+```bash
+python -m src.ingestion.qa_export \
+  --timeframe 1Min \
+  --start 2025-11-01 \
+  --end 2025-12-01
+```
+
+---
+
+## Strict Enforcement Mode (CI / Guardrail Mode)
+
+Fails the pipeline if integrity thresholds are exceeded.
+
+```bash
+python -m src.ingestion.qa_export \
+  --timeframe all \
+  --start 2025-11-01 \
+  --end 2025-12-01 \
+  --strict \
+  --max-duplicate-keys 0 \
+  --max-ohlc-violations 0
+```
+
+### Exit Codes
+
+| Condition                               | Exit Code |
+| --------------------------------------- | --------- |
+| PASS (within thresholds)                | 0         |
+| WARN (coverage/gap thresholds exceeded) | 0         |
+| FAIL (strict integrity violation)       | 1         |
+
+Strict mode ensures:
+
+* Duplicate primary keys fail the pipeline
+* OHLC violations fail the pipeline
+* QA artifacts are still written for debugging
+* CI jobs automatically fail when data integrity is compromised
+
+---
+
+## Example CI Integration
+
+```yaml
+- name: Strict QA
+  run: |
+    python -m src.ingestion.qa_export \
+      --timeframe all \
+      --start 2025-11-01 \
+      --end 2025-12-01 \
+      --strict \
+      --max-duplicate-keys 0 \
+      --max-ohlc-violations 0
+```
+
+If integrity rules are violated, the CI job exits with code `1`.
+
+---
+
+## Why This Matters
+
+In trading and backtesting systems:
+
+* Duplicate bars distort indicators (EMA, RSI, VWAP, etc.)
+* OHLC violations corrupt return calculations
+* Silent ingestion errors invalidate research
+* Coverage gaps can bias signal evaluation
+
+The `qa_export` CLI formalizes dataset observability and enables production-grade guardrails before any modeling or execution layer consumes the data.
+
+---
+
 ## Universe Selection Criteria
 
 The project operates on a curated universe (currently 50 tickers) optimized for stable historical availability.
@@ -101,7 +211,7 @@ Document:
 
 ---
 
-## 📡 Alpaca Market Data Client
+##  Alpaca Market Data Client
 
 Reusable Alpaca historical market data client:
 
