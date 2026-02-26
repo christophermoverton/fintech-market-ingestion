@@ -98,7 +98,7 @@ def main():
             
             write_partitioned_parquet(norm, 
                                       writer_cfg, 
-                                      partition_cols=["symbol", "year"]
+                                      partition_cols=["symbol", "date"]
                                       )
             sym_rows += len(norm)
             

@@ -457,6 +457,23 @@ def generate_qa_exports(cfg: ExportConfig) -> Tuple[pd.DataFrame, pd.DataFrame, 
         warn = True
 
     overall_status = "FAIL" if fail else ("WARN" if warn else "PASS")
+    
+    from src.qa.qa_coverage import compute_coverage_by_symbol, write_coverage_csv
+
+    coverage_df = compute_coverage_by_symbol(
+        con=con,
+        parquet_glob=cfg.parquet_glob,   # e.g. data/curated/bars_daily/**/*.parquet
+        run_id=run_id,
+        dataset_name=cfg.dataset_name,           # "bars_daily" or "bars_1m"
+        bar_interval=cfg.bar_interval,           # "1D" or "1Min"
+        start_ts=cfg.start_ts,
+        end_ts=cfg.end_ts,
+        calendar_mode=cfg.calendar,         # "XNYS" default
+        symbols_expected=cfg.symbols_expected,   # optional list
+    )
+    artifact_dir = cfg.out_root / run_id
+    coverage_out = f"{artifact_dir}/qa_coverage_by_symbol.csv"
+    write_coverage_csv(coverage_df, coverage_out)
 
     global_export = pd.DataFrame([{
         "run_id": run_id,
