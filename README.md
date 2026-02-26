@@ -1081,4 +1081,97 @@ Coverage reporting strengthens the ingestion → QA → analytics contract and i
 
 ---
 
+## Testing & QA Validation (M2 – Data Quality & Observability)
+
+This repository includes deterministic unit tests validating core framework logic for trading data ingestion and quality enforcement.
+
+### What Is Tested
+
+Normalization Integrity
+Ensures `normalize_bars()` produces consistent, production-ready output:
+
+* Canonical column naming
+* Numeric dtype coercion (OHLCV)
+* UTC timestamp normalization
+* Deterministic sorting by (symbol, ts_utc)
+* Injection of required metadata fields (source, timeframe)
+
+QA Integrity Detection
+Validates framework-level QA metrics detect:
+
+* Duplicate primary keys (`symbol`, `ts_utc`, `timeframe`)
+* OHLC structural violations (e.g., high < open/close, low > open/close)
+* Strict enforcement behavior when thresholds are exceeded
+
+### Why This Matters
+
+Even minimal unit coverage provides:
+
+* Regression protection during refactors
+* Confidence in normalization stability
+* Verified integrity enforcement
+* CI-ready green/red gating
+* Increased credibility for trading-grade data pipelines
+
+All tests are:
+
+* Fully deterministic
+* Local-only (no network calls)
+* DuckDB-backed using temporary parquet files
+* Independent of live market calendars
+
+---
+
+## Running Tests
+
+From the repository root:
+
+pytest -q
+
+Expected output:
+
+2 passed
+
+(Additional tests may increase this count over time.)
+
+---
+
+## QA Enforcement Model
+
+QA exports generate:
+
+* Per-symbol summary (qa_summary_by_symbol.csv)
+* Global summary (qa_summary_global.csv)
+* Coverage summary (qa_coverage_by_symbol.csv)
+
+When run with strict mode:
+
+--strict
+
+The pipeline exits non-zero if:
+
+* Duplicate primary keys exceed threshold
+* OHLC violations exceed threshold
+
+This enables CI/CD gating and automated data integrity enforcement.
+
+---
+
+## Current Coverage Scope (M2)
+
+Unit tests cover:
+
+* Normalization logic
+* Duplicate key detection
+* OHLC violation detection
+* Strict enforcement path
+
+Future milestones may extend testing to:
+
+* Gap detection precision
+* Coverage threshold behavior
+* Calendar edge cases (early closes, holidays)
+* Multi-symbol dataset integrity validation
+
+
 
