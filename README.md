@@ -85,6 +85,37 @@ DuckDB Analytics + QA Observability
   ```
 * Optional strict enforcement mode (CI-friendly)
 
+### Corporate Actions Dividend Ingestion (M3)
+
+M3 adds a separate Alpaca corporate-actions ingestion path for dividend events. Corporate actions are event-based issuer/security records, not OHLCV bars, trades, or quotes.
+
+Supported dividend event types:
+
+```text
+cash_dividend
+stock_dividend
+```
+
+Live CLI usage:
+
+```bash
+python -m src.cli.ingest_corporate_actions \
+  --symbols AAPL MSFT SPY \
+  --start 2024-01-01 \
+  --end 2024-12-31 \
+  --types cash_dividend stock_dividend \
+  --output-root data/curated/corporate_actions/dividends
+```
+
+Expected outputs:
+
+```text
+data/curated/corporate_actions/dividends/dividends.parquet
+data/curated/corporate_actions/dividends/metadata.json
+```
+
+For the full schema, metadata contract, CLI arguments, and a CI-safe sample-data example, see `docs/corporate_actions_dividends.md`.
+
 ---
 
 # QA Export CLI Usage
