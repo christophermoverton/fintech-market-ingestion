@@ -7,8 +7,13 @@ import pytest
 # If it is currently a script file under src/qa/qa_export.py, import accordingly:
 # from src.qa.qa_export import ExportConfig, Thresholds, generate_qa_exports
 from src.ingestion.qa_export import ExportConfig, Thresholds, generate_qa_exports
-
-from src.qa.qa_enforcer import build_metrics_from_dataframes, enforce_or_exit, Thresholds as EnforcerThresholds
+from src.qa.qa_enforcer import (
+    Thresholds as EnforcerThresholds,
+)
+from src.qa.qa_enforcer import (
+    build_metrics_from_dataframes,
+    enforce_or_exit,
+)
 
 
 def test_generate_qa_exports_flags_duplicates_and_ohlc(tmp_path: Path):
@@ -40,18 +45,18 @@ def test_generate_qa_exports_flags_duplicates_and_ohlc(tmp_path: Path):
     cfg = ExportConfig(
         dataset_name="bars_1m",
         bar_interval="1Min",
-        parquet_glob=str(pq),             # point directly at the temp parquet file
+        parquet_glob=str(pq),  # point directly at the temp parquet file
         start_ts=pd.Timestamp("2025-11-03", tz="UTC"),
         end_ts=pd.Timestamp("2025-11-04", tz="UTC"),
         calendar="XNYS",
         thresholds=Thresholds(
-            min_coverage_pct=0.0,          # disable coverage complaints for this unit test
+            min_coverage_pct=0.0,  # disable coverage complaints for this unit test
             max_duplicate_rows=0,
             max_duplicate_keys=0,
             max_ohlc_violations=0,
             max_gap_count_per_symbol=10**9,  # don't care about gaps here
         ),
-        out_root=tmp_path,                # avoid writing into repo artifacts
+        out_root=tmp_path,  # avoid writing into repo artifacts
         run_id="unit_test_run",
     )
 

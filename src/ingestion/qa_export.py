@@ -2,38 +2,39 @@ from __future__ import annotations
 
 import argparse
 from dataclasses import dataclass
-from datetime import datetime, timezone
 from pathlib import Path
-from typing import Dict, Iterable, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 
 import duckdb
 import pandas as pd
 
 CURATED_PATHS = {
-    "1D" : "data/curated/bars_daily/**/*.parquet",
-    "1Min" : "data/curated/bars_1m/**/*.parquet",
+    "1D": "data/curated/bars_daily/**/*.parquet",
+    "1Min": "data/curated/bars_1m/**/*.parquet",
 }
 
 CANONICAL_COLS = [
-    "symbol", 
-    "ts_utc", 
-    "open", 
-    "high", 
-    "low", 
-    "close", 
+    "symbol",
+    "ts_utc",
+    "open",
+    "high",
+    "low",
+    "close",
     "volume",
     "source",
     "timeframe",
-    ] 
+]
+
 
 @dataclass(frozen=True)
 class Thresholds:
     min_coverage_pct: float = 0.995
     max_duplicate_rows: int = 0
-    max_duplicate_keys: int = 0   # NEW: strict integrity threshold
+    max_duplicate_keys: int = 0  # NEW: strict integrity threshold
     max_ohlc_violations: int = 0
     max_gap_count_per_symbol: int = 0
-    
+
+
 @dataclass(frozen=True)
 class ExportConfig:
     dataset_name: str
@@ -42,15 +43,17 @@ class ExportConfig:
     start_ts: Optional[pd.Timestamp] = None
     end_ts: Optional[pd.Timestamp] = None
     symbols_expected: Optional[List[str]] = None
-    calendar: str = "XNYS" # calendar is (pandas_market_calendars), fallback to weekday
+    calendar: str = "XNYS"  # calendar is (pandas_market_calendars), fallback to weekday
     thresholds: Thresholds = Thresholds()
-    sample_n:  int = 0 # reserved
+    sample_n: int = 0  # reserved
     out_root: Path = Path("artifacts/qa")
-    run_id: Optional[str] = None # if None -> generated deterministically from config window
-    
+    run_id: Optional[str] = None  # if None -> generated deterministically from config window
+
+
 # -----------------------
 # Utilities
 # -----------------------
+
 
 def _connect_duckdb() -> duckdb.DuckDBPyConnection:
     con = duckdb.connect(database=":memory:")
@@ -98,9 +101,13 @@ def _where_time_filter(cfg: ExportConfig) -> str:
     # DuckDB will compare timestamps correctly if ts_utc is timestamp type
     clauses = []
     if cfg.start_ts is not None:
-        clauses.append(f"ts_utc >= TIMESTAMP '{cfg.start_ts.tz_convert('UTC').strftime('%Y-%m-%d %H:%M:%S')}'")
+        clauses.append(
+            f"ts_utc >= TIMESTAMP '{cfg.start_ts.tz_convert('UTC').strftime('%Y-%m-%d %H:%M:%S')}'"
+        )
     if cfg.end_ts is not None:
-        clauses.append(f"ts_utc < TIMESTAMP '{cfg.end_ts.tz_convert('UTC').strftime('%Y-%m-%d %H:%M:%S')}'")
+        clauses.append(
+            f"ts_utc < TIMESTAMP '{cfg.end_ts.tz_convert('UTC').strftime('%Y-%m-%d %H:%M:%S')}'"
+        )
     return ("WHERE " + " AND ".join(clauses)) if clauses else ""
 
 
@@ -108,7 +115,10 @@ def _where_time_filter(cfg: ExportConfig) -> str:
 # Calendar expected bars
 # -----------------------
 
-def _try_get_calendar_sessions(start_ts: pd.Timestamp, end_ts: pd.Timestamp, calendar: str) -> Optional[pd.DataFrame]:
+
+def _try_get_calendar_sessions(
+    start_ts: pd.Timestamp, end_ts: pd.Timestamp, calendar: str
+) -> Optional[pd.DataFrame]:
     """
     Returns a schedule DataFrame with market_open/market_close in UTC if pandas_market_calendars exists.
     """
@@ -138,7 +148,13 @@ def expected_bars_daily(cfg: ExportConfig, symbols_present: List[str]) -> Dict[s
         expected = int(len(sched))
     else:
         # fallback: business days approximation
-        expected = int(len(pd.bdate_range(cfg.start_ts.normalize(), cfg.end_ts.normalize() - pd.Timedelta(days=1))))
+        expected = int(
+            len(
+                pd.bdate_range(
+                    cfg.start_ts.normalize(), cfg.end_ts.normalize() - pd.Timedelta(days=1)
+                )
+            )
+        )
 
     return {s: expected for s in symbols_present}
 
@@ -154,11 +170,19 @@ def expected_bars_1min(cfg: ExportConfig, symbols_present: List[str]) -> Dict[st
     sched = _try_get_calendar_sessions(cfg.start_ts, cfg.end_ts, cfg.calendar)
     if sched is not None and not sched.empty:
         # sched columns typically include market_open and market_close in UTC
-        minutes = ((sched["market_close"] - sched["market_open"]).dt.total_seconds() // 60).astype(int)
+        minutes = ((sched["market_close"] - sched["market_open"]).dt.total_seconds() // 60).astype(
+            int
+        )
         expected = int(minutes.sum())
     else:
         # fallback: 390 per weekday (approx)
-        bdays = int(len(pd.bdate_range(cfg.start_ts.normalize(), cfg.end_ts.normalize() - pd.Timedelta(days=1))))
+        bdays = int(
+            len(
+                pd.bdate_range(
+                    cfg.start_ts.normalize(), cfg.end_ts.normalize() - pd.Timedelta(days=1)
+                )
+            )
+        )
         expected = 390 * bdays
 
     return {s: expected for s in symbols_present}
@@ -168,7 +192,10 @@ def expected_bars_1min(cfg: ExportConfig, symbols_present: List[str]) -> Dict[st
 # Metrics via DuckDB
 # -----------------------
 
-def compute_symbol_bounds_and_rows(con: duckdb.DuckDBPyConnection, cfg: ExportConfig) -> pd.DataFrame:
+
+def compute_symbol_bounds_and_rows(
+    con: duckdb.DuckDBPyConnection, cfg: ExportConfig
+) -> pd.DataFrame:
     where = _where_time_filter(cfg)
     q = f"""
     SELECT
@@ -298,7 +325,9 @@ def compute_gap_metrics_daily(con: duckdb.DuckDBPyConnection, cfg: ExportConfig)
     if sched is not None and not sched.empty:
         expected_days = pd.to_datetime(sched.index).date
     else:
-        expected_days = pd.bdate_range(cfg.start_ts.normalize(), cfg.end_ts.normalize() - pd.Timedelta(days=1)).date
+        expected_days = pd.bdate_range(
+            cfg.start_ts.normalize(), cfg.end_ts.normalize() - pd.Timedelta(days=1)
+        ).date
 
     expected_list = list(expected_days)
 
@@ -312,7 +341,6 @@ def compute_gap_metrics_daily(con: duckdb.DuckDBPyConnection, cfg: ExportConfig)
         gap_segments = 0
         max_gap_len = 0
         cur = 0
-        prev = None
         for d in expected_list:
             if d in have:
                 if cur > 0:
@@ -325,12 +353,14 @@ def compute_gap_metrics_daily(con: duckdb.DuckDBPyConnection, cfg: ExportConfig)
             gap_segments += 1
             max_gap_len = max(max_gap_len, cur)
 
-        rows.append({
-            "symbol": sym,
-            "gap_count": gap_count,
-            "gap_segments": gap_segments,
-            "max_gap_len": max_gap_len,
-        })
+        rows.append(
+            {
+                "symbol": sym,
+                "gap_count": gap_count,
+                "gap_segments": gap_segments,
+                "max_gap_len": max_gap_len,
+            }
+        )
 
     return pd.DataFrame(rows).sort_values(["gap_count", "symbol"], ascending=[False, True])
 
@@ -338,6 +368,7 @@ def compute_gap_metrics_daily(con: duckdb.DuckDBPyConnection, cfg: ExportConfig)
 # -----------------------
 # Export builder
 # -----------------------
+
 
 def generate_qa_exports(cfg: ExportConfig) -> Tuple[pd.DataFrame, pd.DataFrame, str]:
     """
@@ -348,7 +379,11 @@ def generate_qa_exports(cfg: ExportConfig) -> Tuple[pd.DataFrame, pd.DataFrame, 
     where = _where_time_filter(cfg)
 
     # Schema sanity (best-effort)
-    cols = con.execute(f"SELECT * FROM read_parquet('{cfg.parquet_glob}') {where} LIMIT 0").df().columns.tolist()
+    cols = (
+        con.execute(f"SELECT * FROM read_parquet('{cfg.parquet_glob}') {where} LIMIT 0")
+        .df()
+        .columns.tolist()
+    )
     missing_cols = [c for c in CANONICAL_COLS if c not in cols]
 
     bounds = compute_symbol_bounds_and_rows(con, cfg)
@@ -372,21 +407,31 @@ def generate_qa_exports(cfg: ExportConfig) -> Tuple[pd.DataFrame, pd.DataFrame, 
         expected_map = expected_bars_daily(cfg, symbols_present)
 
     # Join per-symbol
-    by_sym = bounds.merge(dups, on="symbol", how="left") \
-                   .merge(ohlc, on="symbol", how="left") \
-                   .merge(gaps, on="symbol", how="left")
+    by_sym = (
+        bounds.merge(dups, on="symbol", how="left")
+        .merge(ohlc, on="symbol", how="left")
+        .merge(gaps, on="symbol", how="left")
+    )
 
     by_sym["duplicate_rows"] = by_sym["duplicate_rows"].fillna(0).astype(int)
     by_sym["duplicate_keys"] = by_sym["duplicate_keys"].fillna(0).astype(int)
     by_sym["ohlc_violation_count"] = by_sym["ohlc_violation_count"].fillna(0).astype(int)
     by_sym["gap_count"] = by_sym["gap_count"].fillna(0).astype(int)
-    by_sym["gap_segments"] = by_sym.get("gap_segments", pd.Series([0]*len(by_sym))).fillna(0).astype(int)
-    by_sym["max_gap_len"] = by_sym.get("max_gap_len", pd.Series([0]*len(by_sym))).fillna(0).astype(int)
+    by_sym["gap_segments"] = (
+        by_sym.get("gap_segments", pd.Series([0] * len(by_sym))).fillna(0).astype(int)
+    )
+    by_sym["max_gap_len"] = (
+        by_sym.get("max_gap_len", pd.Series([0] * len(by_sym))).fillna(0).astype(int)
+    )
 
     by_sym["expected_bars"] = by_sym["symbol"].map(expected_map).fillna(0).astype(int)
     by_sym["coverage_pct"] = by_sym.apply(
-        lambda r: (float(r["rows_observed"]) / float(r["expected_bars"])) if r["expected_bars"] > 0 else 0.0,
-        axis=1
+        lambda r: (
+            (float(r["rows_observed"]) / float(r["expected_bars"]))
+            if r["expected_bars"] > 0
+            else 0.0
+        ),
+        axis=1,
     )
 
     # Notes
@@ -397,8 +442,14 @@ def generate_qa_exports(cfg: ExportConfig) -> Tuple[pd.DataFrame, pd.DataFrame, 
         note.append("symbols_expected not provided (derived from data)")
     if cfg.start_ts is None or cfg.end_ts is None:
         note.append("start/end window not provided (expected_bars may be 0)")
-    if _try_get_calendar_sessions(cfg.start_ts, cfg.end_ts, cfg.calendar) is None and cfg.start_ts is not None and cfg.end_ts is not None:
-        note.append("calendar fallback used (install pandas_market_calendars for session-aware expected bars)")
+    if (
+        _try_get_calendar_sessions(cfg.start_ts, cfg.end_ts, cfg.calendar) is None
+        and cfg.start_ts is not None
+        and cfg.end_ts is not None
+    ):
+        note.append(
+            "calendar fallback used (install pandas_market_calendars for session-aware expected bars)"
+        )
     by_sym["notes"] = "; ".join(note) if note else ""
 
     # Add required export columns and stable order
@@ -406,26 +457,28 @@ def generate_qa_exports(cfg: ExportConfig) -> Tuple[pd.DataFrame, pd.DataFrame, 
     start_s = _format_ts(cfg.start_ts)
     end_s = _format_ts(cfg.end_ts)
 
-    by_sym_export = pd.DataFrame({
-        "run_id": run_id,
-        "dataset_name": cfg.dataset_name,
-        "bar_interval": cfg.bar_interval,
-        "symbol": by_sym["symbol"],
-        "start_ts": start_s,
-        "end_ts": end_s,
-        "rows_observed": by_sym["rows_observed"],
-        "expected_bars": by_sym["expected_bars"],
-        "coverage_pct": by_sym["coverage_pct"],
-        "duplicate_rows": by_sym["duplicate_rows"],
-        "duplicate_keys": by_sym["duplicate_keys"],
-        "gap_count": by_sym["gap_count"],
-        "gap_segments": by_sym["gap_segments"],
-        "max_gap_len": by_sym["max_gap_len"],
-        "ohlc_violation_count": by_sym["ohlc_violation_count"],
-        "first_ts": by_sym["first_ts"],
-        "last_ts": by_sym["last_ts"],
-        "notes": by_sym["notes"],
-    }).sort_values(["symbol"])
+    by_sym_export = pd.DataFrame(
+        {
+            "run_id": run_id,
+            "dataset_name": cfg.dataset_name,
+            "bar_interval": cfg.bar_interval,
+            "symbol": by_sym["symbol"],
+            "start_ts": start_s,
+            "end_ts": end_s,
+            "rows_observed": by_sym["rows_observed"],
+            "expected_bars": by_sym["expected_bars"],
+            "coverage_pct": by_sym["coverage_pct"],
+            "duplicate_rows": by_sym["duplicate_rows"],
+            "duplicate_keys": by_sym["duplicate_keys"],
+            "gap_count": by_sym["gap_count"],
+            "gap_segments": by_sym["gap_segments"],
+            "max_gap_len": by_sym["max_gap_len"],
+            "ohlc_violation_count": by_sym["ohlc_violation_count"],
+            "first_ts": by_sym["first_ts"],
+            "last_ts": by_sym["last_ts"],
+            "notes": by_sym["notes"],
+        }
+    ).sort_values(["symbol"])
 
     # Global metrics
     total_rows = int(by_sym["rows_observed"].sum()) if not by_sym.empty else 0
@@ -434,11 +487,17 @@ def generate_qa_exports(cfg: ExportConfig) -> Tuple[pd.DataFrame, pd.DataFrame, 
     total_duplicate_keys = int(by_sym["duplicate_keys"].sum()) if "duplicate_keys" in by_sym else 0
 
     total_gap_count = int(by_sym["gap_count"].sum()) if "gap_count" in by_sym else 0
-    total_ohlc_violations = int(by_sym["ohlc_violation_count"].sum()) if "ohlc_violation_count" in by_sym else 0
+    total_ohlc_violations = (
+        int(by_sym["ohlc_violation_count"].sum()) if "ohlc_violation_count" in by_sym else 0
+    )
 
     # Status evaluation
     thr = cfg.thresholds
-    below_cov = by_sym_export["coverage_pct"] < thr.min_coverage_pct if len(by_sym_export) else pd.Series([], dtype=bool)
+    below_cov = (
+        by_sym_export["coverage_pct"] < thr.min_coverage_pct
+        if len(by_sym_export)
+        else pd.Series([], dtype=bool)
+    )
     pct_below = float(below_cov.mean()) if len(by_sym_export) else 0.0
 
     fail = False
@@ -457,44 +516,48 @@ def generate_qa_exports(cfg: ExportConfig) -> Tuple[pd.DataFrame, pd.DataFrame, 
         warn = True
 
     overall_status = "FAIL" if fail else ("WARN" if warn else "PASS")
-    
+
     from src.qa.qa_coverage import compute_coverage_by_symbol, write_coverage_csv
 
     coverage_df = compute_coverage_by_symbol(
         con=con,
-        parquet_glob=cfg.parquet_glob,   # e.g. data/curated/bars_daily/**/*.parquet
+        parquet_glob=cfg.parquet_glob,  # e.g. data/curated/bars_daily/**/*.parquet
         run_id=run_id,
-        dataset_name=cfg.dataset_name,           # "bars_daily" or "bars_1m"
-        bar_interval=cfg.bar_interval,           # "1D" or "1Min"
+        dataset_name=cfg.dataset_name,  # "bars_daily" or "bars_1m"
+        bar_interval=cfg.bar_interval,  # "1D" or "1Min"
         start_ts=cfg.start_ts,
         end_ts=cfg.end_ts,
-        calendar_mode=cfg.calendar,         # "XNYS" default
-        symbols_expected=cfg.symbols_expected,   # optional list
+        calendar_mode=cfg.calendar,  # "XNYS" default
+        symbols_expected=cfg.symbols_expected,  # optional list
     )
     artifact_dir = cfg.out_root / run_id
-    artifact_dir.mkdir(parents=True, exist_ok=True)  
+    artifact_dir.mkdir(parents=True, exist_ok=True)
     coverage_out = f"{artifact_dir}/qa_coverage_by_symbol.csv"
     write_coverage_csv(coverage_df, coverage_out)
 
-    global_export = pd.DataFrame([{
-        "run_id": run_id,
-        "dataset_name": cfg.dataset_name,
-        "bar_interval": cfg.bar_interval,
-        "start_ts": start_s,
-        "end_ts": end_s,
-        "total_rows": total_rows,
-        "unique_rows": unique_rows,
-        "duplicate_rows": duplicate_rows,
-        "total_duplicate_keys": total_duplicate_keys,
-        "symbols_expected": len(expected_syms),
-        "symbols_present": len(symbols_present),
-        "symbols_missing": ";".join(symbols_missing),
-        "total_gap_count": total_gap_count,
-        "total_ohlc_violation_count": total_ohlc_violations,
-        "pct_symbols_below_coverage_threshold": pct_below,
-        "coverage_threshold": thr.min_coverage_pct,
-        "overall_status": overall_status,
-    }])
+    global_export = pd.DataFrame(
+        [
+            {
+                "run_id": run_id,
+                "dataset_name": cfg.dataset_name,
+                "bar_interval": cfg.bar_interval,
+                "start_ts": start_s,
+                "end_ts": end_s,
+                "total_rows": total_rows,
+                "unique_rows": unique_rows,
+                "duplicate_rows": duplicate_rows,
+                "total_duplicate_keys": total_duplicate_keys,
+                "symbols_expected": len(expected_syms),
+                "symbols_present": len(symbols_present),
+                "symbols_missing": ";".join(symbols_missing),
+                "total_gap_count": total_gap_count,
+                "total_ohlc_violation_count": total_ohlc_violations,
+                "pct_symbols_below_coverage_threshold": pct_below,
+                "coverage_threshold": thr.min_coverage_pct,
+                "overall_status": overall_status,
+            }
+        ]
+    )
 
     return by_sym_export, global_export, overall_status
 
@@ -510,19 +573,24 @@ def write_exports(cfg: ExportConfig) -> Tuple[pd.DataFrame, pd.DataFrame, str, P
     print(f"QA EXPORT ({cfg.dataset_name}/{cfg.bar_interval}) :: {status} :: {out_dir.resolve()}")
     return by_sym, glob, status, out_dir
 
-        
-
 
 # -----------------------
 # CLI
 # -----------------------
 
+
 def main() -> None:
-    ap = argparse.ArgumentParser(description="Generate framework-level QA summary exports (global + by symbol).")
+    ap = argparse.ArgumentParser(
+        description="Generate framework-level QA summary exports (global + by symbol)."
+    )
     ap.add_argument("--timeframe", choices=["1D", "1Min", "all"], default="all")
-    ap.add_argument("--start", default=None, help="Start timestamp/date (inclusive). e.g. 2025-11-01")
+    ap.add_argument(
+        "--start", default=None, help="Start timestamp/date (inclusive). e.g. 2025-11-01"
+    )
     ap.add_argument("--end", default=None, help="End timestamp/date (exclusive). e.g. 2025-12-01")
-    ap.add_argument("--dataset-name", default=None, help="Logical dataset name (default derived from timeframe)")
+    ap.add_argument(
+        "--dataset-name", default=None, help="Logical dataset name (default derived from timeframe)"
+    )
     ap.add_argument("--symbols", default=None, help="Path to expected symbols list (optional)")
     ap.add_argument("--calendar", default="XNYS", help="Market calendar id (default: XNYS).")
     ap.add_argument("--out", default="artifacts/qa", help="Output root for QA artifacts.")
@@ -530,9 +598,18 @@ def main() -> None:
     ap.add_argument("--max-duplicate-rows", type=int, default=0)
     ap.add_argument("--max-ohlc-violations", type=int, default=0)
     ap.add_argument("--max-gap-count-per-symbol", type=int, default=0)
-    ap.add_argument("--run-id", default=None, help="Optional explicit run id (otherwise deterministic).")
-    ap.add_argument("--strict", action="store_true", help="Fail pipeline if QA thresholds are violated.")
-    ap.add_argument("--max-duplicate-keys", type=int, default=0, help="Strict threshold for duplicate primary keys.")
+    ap.add_argument(
+        "--run-id", default=None, help="Optional explicit run id (otherwise deterministic)."
+    )
+    ap.add_argument(
+        "--strict", action="store_true", help="Fail pipeline if QA thresholds are violated."
+    )
+    ap.add_argument(
+        "--max-duplicate-keys",
+        type=int,
+        default=0,
+        help="Strict threshold for duplicate primary keys.",
+    )
 
     args = ap.parse_args()
 
@@ -543,7 +620,7 @@ def main() -> None:
     thr = Thresholds(
         min_coverage_pct=args.min_coverage_pct,
         max_duplicate_rows=args.max_duplicate_rows,
-        max_duplicate_keys=args.max_duplicate_keys,   # NEW
+        max_duplicate_keys=args.max_duplicate_keys,  # NEW
         max_ohlc_violations=args.max_ohlc_violations,
         max_gap_count_per_symbol=args.max_gap_count_per_symbol,
     )
@@ -563,13 +640,14 @@ def main() -> None:
             run_id=args.run_id,
         )
 
-    exit_code = 0
     from src.qa.qa_enforcer import (
         Thresholds as EnforcerThresholds,
+    )
+    from src.qa.qa_enforcer import (
         build_metrics_from_dataframes,
         enforce_or_exit,
     )
-    
+
     def _enforce(by_sym: pd.DataFrame, glob: pd.DataFrame) -> None:
         metrics = build_metrics_from_dataframes(by_symbol_df=by_sym, global_df=glob)
 
@@ -583,8 +661,6 @@ def main() -> None:
         )
 
         enforce_or_exit(metrics, strict=args.strict, thresholds=enforcer_thresholds)
-    
-    exit_code = 0  # non-strict always exits 0
 
     if args.timeframe == "all":
         by1, g1, s1, _ = write_exports(_cfg("1D"))

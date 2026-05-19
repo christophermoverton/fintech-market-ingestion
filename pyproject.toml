@@ -62,3 +62,27 @@ include-package-data = false
 where = ["."]
 include = ["src*"]
 namespaces = true
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+extend-exclude = [
+  "data",
+  "artifacts",
+  "reports",
+  "dist",
+  "build",
+  ".venv",
+  "venv",
+  "*.egg-info"
+]
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F", "I"]
+ignore = ["E501"]
+
+[tool.ruff.lint.per-file-ignores]
+"examples/corporate_actions_dividend_ingestion_example.py" = ["E402"]
+
+[tool.ruff.format]
+line-ending = "lf"

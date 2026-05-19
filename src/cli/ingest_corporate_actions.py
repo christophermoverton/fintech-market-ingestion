@@ -7,8 +7,8 @@ from pathlib import Path
 from typing import Any, Optional, Sequence
 
 from src.ingestion.alpaca_corporate_actions_client import (
-    AlpacaCorporateActionsClient,
     SUPPORTED_DIVIDEND_ACTION_TYPES,
+    AlpacaCorporateActionsClient,
 )
 from src.ingestion.corporate_actions_normalization import normalize_corporate_action_records
 from src.ingestion.corporate_actions_storage import (
@@ -16,7 +16,6 @@ from src.ingestion.corporate_actions_storage import (
     DividendCorporateActionsWriteResult,
     write_dividend_corporate_actions,
 )
-
 
 DEFAULT_LIMIT = 1000
 UNSAFE_OUTPUT_PATH_PARTS = frozenset({"bars", "bars_daily", "bars_1m", "trades", "quotes"})
@@ -173,7 +172,9 @@ def _validate_action_types(types: Sequence[str]) -> None:
     unsupported = sorted(set(types) - SUPPORTED_DIVIDEND_ACTION_TYPES)
     if unsupported:
         supported = ", ".join(sorted(SUPPORTED_DIVIDEND_ACTION_TYPES))
-        raise ValueError(f"Unsupported dividend corporate action type(s): {unsupported}. Supported: {supported}")
+        raise ValueError(
+            f"Unsupported dividend corporate action type(s): {unsupported}. Supported: {supported}"
+        )
 
 
 if __name__ == "__main__":

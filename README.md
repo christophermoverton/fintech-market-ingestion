@@ -308,6 +308,21 @@ If you install new packages and want to pin exact versions:
 pip freeze > requirements.txt
 ```
 
+### 5) Lint and Format Checks
+
+Ruff provides the baseline lint and formatting checks for M4 quality gates:
+
+```bash
+ruff check src tests examples
+ruff format --check src tests examples
+```
+
+To apply Ruff formatting locally:
+
+```bash
+ruff format src tests examples
+```
+
 ---
 
 ## Configuration (.env)

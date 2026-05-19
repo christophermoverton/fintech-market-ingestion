@@ -217,8 +217,12 @@ def test_m3_docs_storage_defaults_and_cli_flags_are_aligned():
     }
 
     assert str(DEFAULT_DIVIDEND_CORPORATE_ACTIONS_ROOT).replace("\\", "/") in docs
-    assert f"{DEFAULT_DIVIDEND_CORPORATE_ACTIONS_ROOT.as_posix()}/{DIVIDEND_DATASET_FILENAME}" in docs
-    assert f"{DEFAULT_DIVIDEND_CORPORATE_ACTIONS_ROOT.as_posix()}/{DIVIDEND_METADATA_FILENAME}" in docs
+    assert (
+        f"{DEFAULT_DIVIDEND_CORPORATE_ACTIONS_ROOT.as_posix()}/{DIVIDEND_DATASET_FILENAME}" in docs
+    )
+    assert (
+        f"{DEFAULT_DIVIDEND_CORPORATE_ACTIONS_ROOT.as_posix()}/{DIVIDEND_METADATA_FILENAME}" in docs
+    )
     for flag in ["--symbols", "--start", "--end", "--types", "--output-root", "--sort", "--limit"]:
         assert flag in parser_flags
         assert flag in docs

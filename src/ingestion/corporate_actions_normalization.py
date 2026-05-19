@@ -7,8 +7,8 @@ from datetime import date, datetime
 from typing import Any, List, Mapping, Optional, Sequence
 
 from src.ingestion.alpaca_corporate_actions_client import (
-    CorporateActionRecord,
     SUPPORTED_DIVIDEND_ACTION_TYPES,
+    CorporateActionRecord,
 )
 
 

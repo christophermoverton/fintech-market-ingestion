@@ -2,8 +2,9 @@ import pandas as pd
 
 from src.ingestion.normalize import normalize_bars
 
+
 def test_normalize_bars_standardizes_schema_and_sorts():
-    #unsorted timestamps, mixed casing, string numerics
+    # unsorted timestamps, mixed casing, string numerics
     df = pd.DataFrame(
         {
             "timestamp": [
@@ -15,10 +16,9 @@ def test_normalize_bars_standardizes_schema_and_sorts():
             "low": ["99.9", "99.7"],
             "close": ["100.7", "100.2"],
             "volume": ["10", "20"],
-
         }
     )
-    
+
     out = normalize_bars(
         df=df,
         symbol="AAPL",
@@ -38,14 +38,14 @@ def test_normalize_bars_standardizes_schema_and_sorts():
         "source",
         "timeframe",
     }
-    
+
     assert expected_cols.issubset(set(out.columns))
-    
-    #Symbol, source, timeframe injectedf
+
+    # Symbol, source, timeframe injectedf
     assert (out["symbol"] == "AAPL").all()
     assert (out["source"] == "alpaca").all()
     assert (out["timeframe"] == "1Min").all()
-    
+
     # Numeric dtype conversion
     assert pd.api.types.is_numeric_dtype(out["open"])
     assert pd.api.types.is_numeric_dtype(out["high"])
@@ -57,5 +57,6 @@ def test_normalize_bars_standardizes_schema_and_sorts():
 
     # Timestamps timezone-aware UTC
     assert out["ts_utc"].dt.tz is not None
+
 
 test_normalize_bars_standardizes_schema_and_sorts()
