@@ -2,6 +2,8 @@
 
 A production-style market data ingestion and validation framework for historical OHLCV bars (Daily + 1-Minute) using Alpaca market data. The pipeline writes curated, partitioned Parquet datasets and provides a structured QA layer with artifact-based observability and optional strict enforcement suitable for CI gating and trading research workflows.
 
+For setup, packaging, linting, build validation, and future publishing boundaries, see [docs/packaging_pypi_readiness.md](docs/packaging_pypi_readiness.md).
+
 ---
 
 ## Architecture Overview
@@ -126,6 +128,27 @@ data/curated/corporate_actions/dividends/metadata.json
 ```
 
 For the full schema, metadata contract, CLI arguments, and a CI-safe sample-data example, see `docs/corporate_actions_dividends.md`.
+
+---
+
+## Packaging and Developer Setup
+
+The preferred contributor workflow is editable install with the development dependency group:
+
+```bash
+python -m pip install -e ".[dev]"
+```
+
+That setup supports the installed console script and the existing module invocation:
+
+```bash
+fintech-ingest-corporate-actions --help
+python -m src.cli.ingest_corporate_actions --help
+```
+
+For a full packaging and PyPI-readiness walkthrough, including validation commands, build inspection, and cleanup, see [docs/packaging_pypi_readiness.md](docs/packaging_pypi_readiness.md).
+
+If you need a frozen environment for reproduction, `requirements.txt` is available as an optional path, but it is not the preferred development workflow for contributors.
 
 ---
 
