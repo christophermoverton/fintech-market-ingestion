@@ -1,0 +1,95 @@
+name: Publish Package
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: "Publishing target"
+        required: true
+        default: "testpypi"
+        type: choice
+        options:
+          - testpypi
+
+permissions:
+  contents: read
+
+jobs:
+  validate-and-build:
+    name: Validate and build package
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install package with development dependencies
+        run: |
+          python -m pip install -U pip
+          python -m pip install -e ".[dev]"
+
+      - name: Run full test suite
+        run: pytest tests -q
+
+      - name: Run M3 corporate-actions regression validation
+        run: pytest tests/test_m3_corporate_actions_validation.py -q
+
+      - name: Run Ruff lint check
+        run: ruff check src tests examples
+
+      - name: Run Ruff format check
+        run: ruff format --check src tests examples
+
+      - name: Run py_compile smoke check
+        run: python -m py_compile src/cli/ingest_corporate_actions.py
+
+      - name: Run module CLI help smoke check
+        run: python -m src.cli.ingest_corporate_actions --help
+
+      - name: Run installed console script help smoke check
+        run: fintech-ingest-corporate-actions --help
+
+      - name: Build source distribution and wheel
+        run: python -m build
+
+      - name: Inspect built package artifacts
+        run: |
+          tar tf dist/*.tar.gz
+          python -m zipfile --list dist/*.whl
+
+      - name: Upload package artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: package-distributions
+          path: dist/*
+          if-no-files-found: error
+
+  publish-testpypi:
+    name: Publish to TestPyPI
+    needs: validate-and-build
+    runs-on: ubuntu-latest
+    if: ${{ github.event.inputs.target == 'testpypi' }}
+    environment:
+      name: testpypi
+      url: https://test.pypi.org/project/fintech-market-ingestion/
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Download package artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: package-distributions
+          path: dist
+
+      - name: Publish to TestPyPI with Trusted Publishing
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: https://test.pypi.org/legacy/

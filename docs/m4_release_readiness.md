@@ -20,6 +20,7 @@ Packaging should make the project installable, lintable, and publish-ready witho
 - M4.4 Console script entry point
 - M4.5 Packaging and PyPI-readiness documentation
 - M4.6 Deterministic validation and release readiness
+- M4.7 Secure TestPyPI publishing workflow
 
 M4 adds:
 
@@ -31,6 +32,7 @@ M4 adds:
 - Package artifact inspection guidance
 - Installed `fintech-ingest-corporate-actions` console script
 - Packaging and PyPI-readiness documentation
+- Manual GitHub Actions workflow for secure TestPyPI publishing
 
 ## Validation Commands
 
@@ -129,12 +131,24 @@ Artifact contents should be limited to source files, package metadata, license/r
 
 ## Publishing Boundary
 
-M4 validates local package readiness only. It does not publish to PyPI or TestPyPI and does not add publishing credentials or automation.
+M4 validates local package readiness and provides a controlled manual TestPyPI publishing path. It does not publish to real PyPI and does not add publishing credentials.
 
+- `.github/workflows/publish-package.yml` is manually triggered with `target=testpypi`.
+- The workflow validates, builds, uploads artifacts, and publishes to TestPyPI only.
+- Trusted Publishing/OIDC is the preferred publishing approach.
+- The workflow uses `id-token: write` only in the TestPyPI publish job.
+- Token-based publishing is fallback only.
 - Future publishing must be explicitly approved.
 - Future publishing should prefer credential-safe patterns.
 - Credentials and tokens must not be committed to the repository.
-- Publishing workflows are out of scope for M4.
+- Real PyPI publishing is out of scope for M4.7 and is not enabled in the workflow.
+
+If token-based publishing is required later, add token values only as GitHub Actions repository secrets:
+
+- `TEST_PYPI_API_TOKEN` for TestPyPI fallback publishing
+- `PYPI_API_TOKEN` only for future real PyPI publishing after explicit approval
+
+Never paste token values into source files, docs, issues, comments, workflow YAML, or logs.
 
 ## Safety Checks
 
@@ -149,11 +163,13 @@ M4 validates local package readiness only. It does not publish to PyPI or TestPy
 - M3 dividend corporate-actions contracts remain separate from OHLCV bar contracts.
 - Existing `python -m ...` CLI usage remains supported.
 - Installed console-script usage remains supported.
+- TestPyPI must be validated before real PyPI.
+- Real PyPI publishing requires explicit approval.
 
 ## Non-Goals Confirmed
 
-- No PyPI or TestPyPI publishing.
-- No publishing workflow.
+- No automatic PyPI or TestPyPI publishing.
+- No real PyPI publishing.
 - No credentials, tokens, API keys, or secrets.
 - No live Alpaca validation requirement.
 - No ingestion behavior changes.

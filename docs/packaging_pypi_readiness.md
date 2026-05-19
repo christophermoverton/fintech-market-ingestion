@@ -81,10 +81,64 @@ Remove-Item -Recurse -Force *.egg-info -ErrorAction SilentlyContinue
 ## TestPyPI and PyPI Boundary
 
 - M4 validates local packaging readiness only.
-- No publishing happens automatically.
+- Publishing is manual and starts with TestPyPI.
 - Do not commit credentials, tokens, or API keys.
-- Future publishing must be explicitly approved.
+- Real PyPI publishing must be explicitly approved separately.
 - Prefer credential-safe publishing patterns later, once release policy is defined.
+
+## Secure Publishing Workflow
+
+The manual GitHub Actions workflow at `.github/workflows/publish-package.yml` validates, builds, uploads package artifacts for review, and publishes to TestPyPI only.
+
+The workflow trigger is manual:
+
+```text
+workflow_dispatch target=testpypi
+```
+
+The workflow has two stages:
+
+- `validate-and-build` installs the package with `.[dev]`, runs tests, runs M3 regression validation, runs Ruff checks, runs CLI smoke checks, builds the source distribution and wheel, inspects artifact contents, and uploads `dist/` as a workflow artifact.
+- `publish-testpypi` downloads the built artifacts and publishes them to TestPyPI.
+
+The selected publishing approach is Trusted Publishing/OIDC. The workflow grants `id-token: write` only to the TestPyPI publishing job and does not store token values in YAML.
+
+### TestPyPI Trusted Publishing Setup
+
+Before the workflow can publish to TestPyPI, configure a trusted publisher in TestPyPI for this project:
+
+- Repository owner: `christophermoverton`
+- Repository name: `fintech-market-ingestion`
+- Workflow filename: `publish-package.yml`
+- Environment name: `testpypi`
+
+If the TestPyPI project does not exist yet, create the project or follow TestPyPI's pending-publisher flow before running the workflow.
+
+### Token Fallback
+
+Trusted Publishing/OIDC is preferred. If token-based publishing is required as a fallback, create the token outside the repository and add it only as a GitHub Actions repository secret:
+
+```text
+Repository Settings -> Secrets and variables -> Actions -> New repository secret
+```
+
+Recommended secret name for TestPyPI:
+
+```text
+TEST_PYPI_API_TOKEN
+```
+
+Optional future secret name for real PyPI, only after explicit approval:
+
+```text
+PYPI_API_TOKEN
+```
+
+Never paste token values into source files, docs, issues, comments, workflow YAML, or logs. The current workflow does not reference token secrets because it is configured for Trusted Publishing.
+
+### Real PyPI Boundary
+
+The workflow does not include a real PyPI target. TestPyPI must be validated first. Real PyPI publishing should be added only after explicit release approval and should prefer Trusted Publishing/OIDC or a protected environment with required reviewers.
 
 ## Safety Checklist
 
