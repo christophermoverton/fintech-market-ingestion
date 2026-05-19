@@ -1,10 +1,20 @@
 # virtual environment
 .env
 .venv/
+venv/
 data/
+artifacts/
+reports/
 *.parquet
 __pycache__/
+.pytest_cache/
+.ruff_cache/
 .ipynb_checkpoints/
+
+# package/build outputs
+dist/
+build/
+*.egg-info/
 
 # csv files
 *.csv

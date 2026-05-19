@@ -323,6 +323,52 @@ To apply Ruff formatting locally:
 ruff format src tests examples
 ```
 
+### 6) Package Build Validation
+
+Build the source distribution and wheel locally before any release preparation:
+
+```bash
+python -m build
+```
+
+Build outputs are written under `dist/`. Inspect artifact contents before any
+future TestPyPI or PyPI publishing step:
+
+```bash
+tar tf dist/*.tar.gz
+python -m zipfile --list dist/*.whl
+```
+
+PowerShell inspection alternatives:
+
+```powershell
+Get-ChildItem dist\*.tar.gz | ForEach-Object { tar tf $_.FullName }
+Get-ChildItem dist\*.whl | ForEach-Object { python -m zipfile --list $_.FullName }
+```
+
+The package artifacts must not include credentials, `.env`, generated datasets,
+local artifacts, reports, caches, virtual environments, or build outputs.
+
+Optional wheel smoke test:
+
+```bash
+python -m pip install dist/*.whl
+python -m src.cli.ingest_corporate_actions --help
+```
+
+Clean generated build artifacts when finished:
+
+```bash
+rm -rf dist build *.egg-info
+```
+
+PowerShell equivalent:
+
+```powershell
+Remove-Item -Recurse -Force dist, build -ErrorAction SilentlyContinue
+Remove-Item -Recurse -Force *.egg-info -ErrorAction SilentlyContinue
+```
+
 ---
 
 ## Configuration (.env)
