@@ -278,13 +278,29 @@ python -m venv venv
 .\venv\Scripts\activate
 ```
 
-### 2) Install Dependencies
+### 2) Install Editable Package + Development Tools
+
+For local development, install the project in editable mode with the optional
+development dependencies:
 
 ```bash
-pip install -r requirements.txt
+python -m pip install -e ".[dev]"
 ```
 
-### 3) Export Dependencies (when updating your environment)
+This keeps the current `src.*` import layout available while preparing the
+project for standard Python build tooling.
+
+### 3) Install Frozen Environment (optional)
+
+`requirements.txt` records a fuller pinned working environment, including
+notebook and exploratory tooling. Use it when you need to reproduce that exact
+environment:
+
+```bash
+python -m pip install -r requirements.txt
+```
+
+### 4) Export Dependencies (when updating your environment)
 
 If you install new packages and want to pin exact versions:
 
