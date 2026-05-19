@@ -2,7 +2,7 @@
 
 A production-style market data ingestion and validation framework for historical OHLCV bars (Daily + 1-Minute) using Alpaca market data. The pipeline writes curated, partitioned Parquet datasets and provides a structured QA layer with artifact-based observability and optional strict enforcement suitable for CI gating and trading research workflows.
 
-For setup, packaging, linting, build validation, and future publishing boundaries, see [docs/packaging_pypi_readiness.md](docs/packaging_pypi_readiness.md).
+For setup, packaging, linting, build validation, and future publishing boundaries, see [docs/packaging_pypi_readiness.md](docs/packaging_pypi_readiness.md). For the focused M4 validation checklist, see [docs/m4_release_readiness.md](docs/m4_release_readiness.md).
 
 ---
 
@@ -146,7 +146,7 @@ fintech-ingest-corporate-actions --help
 python -m src.cli.ingest_corporate_actions --help
 ```
 
-For a full packaging and PyPI-readiness walkthrough, including validation commands, build inspection, and cleanup, see [docs/packaging_pypi_readiness.md](docs/packaging_pypi_readiness.md).
+For a full packaging and PyPI-readiness walkthrough, including validation commands, build inspection, and cleanup, see [docs/packaging_pypi_readiness.md](docs/packaging_pypi_readiness.md). The M4 deterministic release-readiness checklist lives in [docs/m4_release_readiness.md](docs/m4_release_readiness.md).
 
 If you need a frozen environment for reproduction, `requirements.txt` is available as an optional path, but it is not the preferred development workflow for contributors.
 
