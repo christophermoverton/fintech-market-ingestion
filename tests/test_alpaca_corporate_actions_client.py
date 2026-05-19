@@ -180,6 +180,24 @@ def test_unsupported_action_type_validation():
     assert client.session.calls == []
 
 
+def test_empty_symbols_validation():
+    client = make_client([])
+
+    with pytest.raises(ValueError, match="At least one symbol is required"):
+        client.fetch_dividends(symbols=[], start="2025-01-01", end="2025-01-31")
+
+    assert client.session.calls == []
+
+
+def test_blank_symbol_string_validation():
+    client = make_client([])
+
+    with pytest.raises(ValueError, match="At least one symbol is required"):
+        client.fetch_dividends(symbols="   ", start="2025-01-01", end="2025-01-31")
+
+    assert client.session.calls == []
+
+
 @pytest.mark.parametrize("limit", [0, 1001])
 def test_limit_validation(limit):
     client = make_client([])

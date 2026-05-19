@@ -138,13 +138,15 @@ class AlpacaCorporateActionsClient:
             limit: Max corporate actions per response page. Alpaca supports 1-1000.
             sort: Alpaca sort order, either asc or desc.
         """
+        requested_symbols = _normalize_values(symbols)
         requested_types = _normalize_values(types) or sorted(SUPPORTED_DIVIDEND_ACTION_TYPES)
+        _validate_symbols(requested_symbols)
         _validate_action_types(requested_types)
         _validate_limit(limit)
         _validate_sort(sort)
 
         params: Dict[str, Any] = {
-            "symbols": ",".join(_normalize_values(symbols)),
+            "symbols": ",".join(requested_symbols),
             "types": ",".join(requested_types),
             "start": start,
             "end": end,
@@ -199,6 +201,11 @@ def _normalize_values(values: Sequence[str] | str | None) -> List[str]:
     else:
         parts = list(values)
     return [part.strip() for part in parts if part and part.strip()]
+
+
+def _validate_symbols(symbols: Sequence[str]) -> None:
+    if not symbols:
+        raise ValueError("At least one symbol is required for Alpaca corporate actions")
 
 
 def _validate_action_types(types: Iterable[str]) -> None:
