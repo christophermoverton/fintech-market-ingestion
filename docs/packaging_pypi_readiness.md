@@ -28,19 +28,52 @@ python -m pip install -e ".[dev]"
 
 ## Validation Commands
 
-Run the local packaging and quality gates with:
+After installing the development dependencies, run the local validation wrapper:
 
 ```bash
-pytest tests -q
-pytest tests/test_m3_corporate_actions_validation.py -q
-ruff check src tests examples
-ruff format --check src tests examples
-python -m build
+python scripts/validate.py
+```
+
+The wrapper mirrors the standard CI checks and runs repository hygiene checks,
+local packaging checks, and quality gates:
+
+```bash
+python scripts/check_repo_hygiene.py
+python -m pytest tests -q
+python -m pytest tests/test_m3_corporate_actions_validation.py -q
+python -m ruff check src tests examples
+python -m ruff format --check src tests examples
+python -m py_compile src/cli/ingest_corporate_actions.py
 python -m src.cli.ingest_corporate_actions --help
 fintech-ingest-corporate-actions --help
 ```
 
 These checks do not require live Alpaca credentials.
+
+The hygiene check validates tracked files only. It fails on CRLF line endings in
+normalized text files, generated or local-only files tracked by Git, obvious
+local absolute paths, and obvious credential files such as `.env`. It does not
+require network access or Alpaca credentials.
+
+## Cross-Platform CI
+
+The standard GitHub Actions workflow at `.github/workflows/ci.yml` runs the
+same credential-free contributor validation path on pull requests and pushes to
+`main` and `feature/m*` branches.
+
+The CI matrix validates Python 3.10, 3.11, and 3.12 on Ubuntu, plus Python 3.12
+on Windows and macOS. It installs the package with the editable development
+dependency path:
+
+```bash
+python -m pip install -U pip
+python -m pip install -e ".[dev]"
+```
+
+The workflow invokes `python scripts/validate.py`, which runs the full tests,
+the focused M3 corporate-actions regression tests, Ruff lint and format checks,
+`py_compile`, and both corporate-actions CLI help smoke checks. It does not
+publish packages and does not require live Alpaca credentials.
 
 ## CLI Smoke Checks
 
@@ -59,9 +92,15 @@ Validate source and wheel artifacts locally with:
 
 ```bash
 python -m build
+python scripts/smoke_test_wheel.py
 tar tf dist/*.tar.gz
 python -m zipfile --list dist/*.whl
 ```
+
+The wheel smoke helper expects exactly one `.whl` file under `dist/`, installs
+that wheel with the active Python interpreter, and runs both corporate-actions
+CLI help checks. It does not publish packages and does not require live Alpaca
+credentials.
 
 On PowerShell, the artifact inspection step can also use `Expand-Archive` or `python -m zipfile --list` if `tar` is not preferred.
 
