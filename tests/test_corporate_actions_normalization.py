@@ -81,6 +81,42 @@ def test_stock_dividend_normalization_from_raw_dictionary():
     assert record.currency is None
 
 
+def test_cash_dividend_missing_currency_defaults_to_usd_without_mutating_raw_payload():
+    payload = cash_dividend_payload(currency=None)
+
+    record = normalize_corporate_action_payload(payload)
+
+    assert record.currency == "USD"
+    assert record.raw["currency"] is None
+    assert record.source_payload_hash == hash_source_payload(payload)
+
+
+def test_cash_dividend_provided_currency_is_preserved():
+    payload = cash_dividend_payload(currency="CAD")
+
+    record = normalize_corporate_action_payload(payload)
+
+    assert record.currency == "CAD"
+    assert record.raw["currency"] == "CAD"
+
+
+def test_nested_response_context_and_raw_payload_are_preserved():
+    payload = cash_dividend_payload(
+        currency=None,
+        _alpaca_dividend_response_key="cash_dividends",
+        _alpaca_nested_response=True,
+        _alpaca_original_payload={"id": "ca-cash-1", "symbol": "AAPL"},
+    )
+
+    record = normalize_corporate_action_payload(payload)
+
+    assert record.corporate_action_type == "cash_dividend"
+    assert record.raw == payload
+    assert record.raw["_alpaca_dividend_response_key"] == "cash_dividends"
+    assert record.raw["_alpaca_original_payload"] == {"id": "ca-cash-1", "symbol": "AAPL"}
+    assert record.source_payload_hash == hash_source_payload(payload)
+
+
 def test_normalization_from_corporate_action_record():
     payload = cash_dividend_payload(id="ca-record-1")
     source_record = CorporateActionRecord.from_payload(payload)

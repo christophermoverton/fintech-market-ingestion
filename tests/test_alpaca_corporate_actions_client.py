@@ -130,6 +130,68 @@ def test_empty_api_response_returns_empty_list():
     assert records == []
 
 
+def test_nested_corporate_actions_cash_dividends_are_flattened():
+    payload = dividend_payload(action_type=None, action_id="cash-nested-1")
+    payload.pop("type")
+    client = make_client([FakeResponse({"corporate_actions": {"cash_dividends": [payload]}})])
+
+    records = client.fetch_dividends(symbols=["AAPL"], start="2025-01-01", end="2025-01-31")
+
+    assert len(records) == 1
+    assert records[0].type == "cash_dividend"
+    assert records[0].as_dict()["type"] == "cash_dividend"
+    assert records[0].as_dict()["_alpaca_dividend_response_key"] == "cash_dividends"
+    assert records[0].as_dict()["_alpaca_nested_response"] is True
+    assert records[0].as_dict()["_alpaca_original_payload"] == payload
+
+
+def test_nested_corporate_actions_stock_dividends_are_flattened():
+    payload = dividend_payload(action_type=None, action_id="stock-nested-1")
+    payload.pop("type")
+    client = make_client([FakeResponse({"corporate_actions": {"stock_dividends": [payload]}})])
+
+    records = client.fetch_dividends(symbols=["AAPL"], start="2025-01-01", end="2025-01-31")
+
+    assert len(records) == 1
+    assert records[0].type == "stock_dividend"
+    assert records[0].as_dict()["_alpaca_dividend_response_key"] == "stock_dividends"
+
+
+def test_mixed_nested_response_preserves_group_order():
+    cash = dividend_payload(action_type=None, action_id="cash-nested-1")
+    cash.pop("type")
+    stock = dividend_payload(action_type=None, action_id="stock-nested-1")
+    stock.pop("type")
+    client = make_client(
+        [
+            FakeResponse(
+                {
+                    "corporate_actions": {
+                        "stock_dividends": [stock],
+                        "cash_dividends": [cash],
+                    }
+                }
+            )
+        ]
+    )
+
+    records = client.fetch_dividends(symbols=["AAPL"], start="2025-01-01", end="2025-01-31")
+
+    assert [record.type for record in records] == ["cash_dividend", "stock_dividend"]
+    assert [record.id for record in records] == ["cash-nested-1", "stock-nested-1"]
+
+
+def test_top_level_nested_dividend_groups_are_supported():
+    cash = dividend_payload(action_type=None, action_id="cash-top-level-1")
+    cash.pop("type")
+    client = make_client([FakeResponse({"cash_dividends": [cash], "stock_dividends": []})])
+
+    records = client.fetch_dividends(symbols=["AAPL"], start="2025-01-01", end="2025-01-31")
+
+    assert len(records) == 1
+    assert records[0].type == "cash_dividend"
+
+
 def test_pagination_collects_multiple_pages():
     client = make_client(
         [
