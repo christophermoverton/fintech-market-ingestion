@@ -152,6 +152,13 @@ Run the cross-platform validation wrapper before opening a pull request:
 python scripts/validate.py
 ```
 
+To smoke-test the built wheel locally without publishing:
+
+```bash
+python -m build
+python scripts/smoke_test_wheel.py
+```
+
 For a full packaging and PyPI-readiness walkthrough, including validation commands, build inspection, and cleanup, see [docs/packaging_pypi_readiness.md](docs/packaging_pypi_readiness.md). The M4 deterministic release-readiness checklist lives in [docs/m4_release_readiness.md](docs/m4_release_readiness.md).
 
 If you need a frozen environment for reproduction, `requirements.txt` is available as an optional path, but it is not the preferred development workflow for contributors.

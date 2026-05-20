@@ -49,3 +49,38 @@ jobs:
 
       - name: Run validation wrapper
         run: python scripts/validate.py
+
+  wheel-smoke:
+    name: Wheel smoke / ${{ matrix.os }} / Python ${{ matrix.python-version }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            python-version: "3.12"
+          - os: windows-latest
+            python-version: "3.12"
+          - os: macos-latest
+            python-version: "3.12"
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+
+      - name: Install build tooling
+        run: |
+          python -m pip install -U pip
+          python -m pip install build
+
+      - name: Build package
+        run: python -m build
+
+      - name: Run wheel install smoke test
+        run: python scripts/smoke_test_wheel.py

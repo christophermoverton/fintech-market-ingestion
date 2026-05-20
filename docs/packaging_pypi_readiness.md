@@ -86,9 +86,15 @@ Validate source and wheel artifacts locally with:
 
 ```bash
 python -m build
+python scripts/smoke_test_wheel.py
 tar tf dist/*.tar.gz
 python -m zipfile --list dist/*.whl
 ```
+
+The wheel smoke helper expects exactly one `.whl` file under `dist/`, installs
+that wheel with the active Python interpreter, and runs both corporate-actions
+CLI help checks. It does not publish packages and does not require live Alpaca
+credentials.
 
 On PowerShell, the artifact inspection step can also use `Expand-Archive` or `python -m zipfile --list` if `tar` is not preferred.
 
