@@ -2,7 +2,7 @@
 
 A production-style market data ingestion and validation framework for historical OHLCV bars (Daily + 1-Minute) using Alpaca market data. The pipeline writes curated, partitioned Parquet datasets and provides a structured QA layer with artifact-based observability and optional strict enforcement suitable for CI gating and trading research workflows.
 
-For cross-platform contributor setup and validation, see [docs/cross_platform_contributor_validation.md](docs/cross_platform_contributor_validation.md). For setup, packaging, linting, build validation, and future publishing boundaries, see [docs/packaging_pypi_readiness.md](docs/packaging_pypi_readiness.md). For the focused M4 validation checklist, see [docs/m4_release_readiness.md](docs/m4_release_readiness.md).
+For cross-platform contributor setup and validation, see [docs/cross_platform_contributor_validation.md](docs/cross_platform_contributor_validation.md). For setup, packaging, linting, build validation, and future publishing boundaries, see [docs/packaging_pypi_readiness.md](docs/packaging_pypi_readiness.md). For the focused M5 release checklist, see [docs/m5_release_readiness.md](docs/m5_release_readiness.md). For the focused M4 validation checklist, see [docs/m4_release_readiness.md](docs/m4_release_readiness.md).
 
 ---
 
@@ -167,7 +167,7 @@ python -m build
 python scripts/smoke_test_wheel.py
 ```
 
-For a full cross-platform contributor workflow, see [docs/cross_platform_contributor_validation.md](docs/cross_platform_contributor_validation.md). For a packaging and PyPI-readiness walkthrough, including validation commands, build inspection, and cleanup, see [docs/packaging_pypi_readiness.md](docs/packaging_pypi_readiness.md). The M4 deterministic release-readiness checklist lives in [docs/m4_release_readiness.md](docs/m4_release_readiness.md).
+For a full cross-platform contributor workflow, see [docs/cross_platform_contributor_validation.md](docs/cross_platform_contributor_validation.md). For a packaging and PyPI-readiness walkthrough, including validation commands, build inspection, and cleanup, see [docs/packaging_pypi_readiness.md](docs/packaging_pypi_readiness.md). The M5 release-readiness checklist lives in [docs/m5_release_readiness.md](docs/m5_release_readiness.md), and the M4 deterministic release-readiness checklist lives in [docs/m4_release_readiness.md](docs/m4_release_readiness.md).
 
 If you need a frozen environment for reproduction, `requirements.txt` is available as an optional path, but it is not the preferred development workflow for contributors.
 
@@ -749,4 +749,3 @@ reports/duckdb_sanity_summary.csv
 * Per-run historical QA trend table
 * Machine-readable JSON summary export
 * CI auto-fail policies based on `qa_summary_global.csv`
-
