@@ -1,5 +1,7 @@
 from __future__ import annotations
+
 import logging
+
 
 def get_logger(name: str) -> logging.Logger:
     """Returns a configured logger with the specified name."""

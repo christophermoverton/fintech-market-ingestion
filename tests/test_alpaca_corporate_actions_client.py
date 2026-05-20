@@ -160,7 +160,9 @@ def test_pagination_collects_multiple_pages():
 
 
 def test_api_client_error_is_wrapped():
-    client = make_client([FakeResponse({"message": "bad request"}, status_code=400, text="bad request")])
+    client = make_client(
+        [FakeResponse({"message": "bad request"}, status_code=400, text="bad request")]
+    )
 
     with pytest.raises(RuntimeError, match="Alpaca corporate-actions request failed"):
         client.fetch_dividends(symbols=["AAPL"], start="2025-01-01", end="2025-01-31")
@@ -210,4 +212,6 @@ def test_sort_validation():
     client = make_client([])
 
     with pytest.raises(ValueError, match="sort must be either"):
-        client.fetch_dividends(symbols=["AAPL"], start="2025-01-01", end="2025-01-31", sort="newest")
+        client.fetch_dividends(
+            symbols=["AAPL"], start="2025-01-01", end="2025-01-31", sort="newest"
+        )

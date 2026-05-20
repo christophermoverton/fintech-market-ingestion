@@ -4,7 +4,6 @@ from pathlib import Path
 from examples import corporate_actions_dividend_ingestion_example as example
 from src.cli.ingest_corporate_actions import build_parser
 
-
 DOC_PATH = Path("docs/corporate_actions_dividends.md")
 EXAMPLE_PATH = Path("examples/corporate_actions_dividend_ingestion_example.py")
 

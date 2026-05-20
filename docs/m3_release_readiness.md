@@ -97,7 +97,7 @@ stock_dividend
 ## Documentation Checks
 
 - `README.md` links to the corporate-actions dividend documentation.
-- `docs/corporate_actions_dividends.md` documents live CLI usage, supported flags, output paths, normalized schema fields, metadata fields, and the CI-safe example.
+- `docs/corporate_actions_dividends.md` documents both CLI invocation styles, supported flags, output paths, normalized schema fields, metadata fields, and the CI-safe example.
 - Documented CLI flags match `src.cli.ingest_corporate_actions.build_parser()`.
 - Documented output paths match the storage defaults in `src.ingestion.corporate_actions_storage`.
 

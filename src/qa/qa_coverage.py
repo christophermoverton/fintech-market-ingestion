@@ -1,11 +1,10 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
 from datetime import date, datetime, timedelta
-from typing import Iterable, Optional
+from typing import Optional
 
+import duckdb
 import pandas as pd
-import duckdb 
 
 COVERAGE_COLUMNS = [
     "run_id",
@@ -25,6 +24,7 @@ COVERAGE_COLUMNS = [
     "notes",
 ]
 
+
 def _to_date_utc(ts: str | datetime) -> date:
     """
     Convert ISO8601 or datetime to a UTC date.
@@ -36,6 +36,7 @@ def _to_date_utc(ts: str | datetime) -> date:
         dt = pd.to_datetime(ts, utc=True)
 
     return dt.date()
+
 
 def generate_expected_days(
     start_ts: str | datetime,
@@ -50,11 +51,11 @@ def generate_expected_days(
     end_d = _to_date_utc(end_ts)
 
     if end_d < start_d:
-        return ([],"end_date < start_date")
-    
+        return ([], "end_date < start_date")
+
     mode = calendar_mode.upper().strip()
     notes = ""
-    
+
     if mode in ("ALL_DAYS", "ALL"):
         days = []
         d = start_d
@@ -62,22 +63,24 @@ def generate_expected_days(
             days.append(d)
             d += timedelta(days=1)
         return (days, notes)
-    
+
     # Exchange calendar mode (e.g., XNYS)
-    try: 
+    try:
         import pandas_market_calendars as mcal
+
         cal = mcal.get_calendar(mode)
-        #sessions in_range expects dates; inclusive range
+        # sessions in_range expects dates; inclusive range
         sched = cal.schedule(start_date=start_d, end_date=end_d)
-        #schedule index is session dates
+        # schedule index is session dates
         days = [d.date() if hasattr(d, "date") else d for d in sched.index]
         return (days, notes)
     except Exception as e:
-        #graceful fallback
-        fallback_days,_ = generate_expected_days(start_ts, end_ts, "WEEKDAY")
+        # graceful fallback
+        fallback_days, _ = generate_expected_days(start_ts, end_ts, "WEEKDAY")
         notes = f"calendar_mode={mode} unavailable; fell back to WEEKDAY ({type(e).__name__})"
         return (fallback_days, notes)
-        
+
+
 def compute_coverage_by_symbol(
     con: duckdb.DuckDBPyConnection,
     parquet_glob: str,
@@ -99,9 +102,9 @@ def compute_coverage_by_symbol(
     print("start_ts:", start_ts)
     print("end_ts:", end_ts)
     print("parquet_glob:", parquet_glob)
-    
-    #Core aggregation from parquet
-    #Note: we filter by slice bounds to ensure partial window works.
+
+    # Core aggregation from parquet
+    # Note: we filter by slice bounds to ensure partial window works.
     agg = con.execute(
         f"""
             WITH base AS (
@@ -126,10 +129,10 @@ def compute_coverage_by_symbol(
             SELECT * FROM per_symbol
             ORDER BY symbol;
         """,
-        [start_ts, end_ts]
+        [start_ts, end_ts],
     ).df()
-  
-    #Ensure expected symbol universe coverage, including symbols with no rows
+
+    # Ensure expected symbol universe coverage, including symbols with no rows
     if symbols_expected is not None:
         expected_df = pd.DataFrame({"symbol": symbols_expected})
         out = expected_df.merge(agg, on="symbol", how="left")
@@ -137,44 +140,45 @@ def compute_coverage_by_symbol(
         out = agg.copy()
         if "symbol" not in out.columns:
             out = pd.DataFrame({"symbol": []})
-    
-    #Fill nulls for no-row symbols
+
+    # Fill nulls for no-row symbols
     out["rows_total"] = out["rows_total"].fillna(0).astype("int64")
     out["observed_days"] = out["observed_days"].fillna(0).astype("int64")
-    #min_ts/max_ts can remain NaT for empty
-    #missing days logic
+    # min_ts/max_ts can remain NaT for empty
+    # missing days logic
     out["expected_days"] = expected_days
     out["missing_day_count"] = (expected_days - out["observed_days"]).clip(lower=0).astype("int64")
     out["coverage_days_pct"] = out.apply(
-        lambda r: (r["observed_days"] / r["expected_days"] ) if r["expected_days"] > 0 else None, 
-        axis=1
+        lambda r: (r["observed_days"] / r["expected_days"]) if r["expected_days"] > 0 else None,
+        axis=1,
     )
-    
-    #Notes per-row: flag empty symbols, and include calendar fallback note (once)
-    
+
+    # Notes per-row: flag empty symbols, and include calendar fallback note (once)
+
     def _row_note(r) -> str:
         parts = []
         if r["rows_total"] == 0:
-            parts.append( "NO_ROWS")
+            parts.append("NO_ROWS")
         if cal_notes:
             parts.append(cal_notes)
         return "; ".join(parts)
-    
+
     out["notes"] = out.apply(_row_note, axis=1)
-    
-    #Add metadata columns
+
+    # Add metadata columns
     out.insert(0, "end_ts", end_ts)
     out.insert(0, "start_ts", start_ts)
     out.insert(0, "calendar_mode", calendar_mode)
     out.insert(0, "bar_interval", bar_interval)
     out.insert(0, "dataset_name", dataset_name)
     out.insert(0, "run_id", run_id)
-    
-    #Column order + types
+
+    # Column order + types
     out = out.rename(columns={"symbol": "symbol"})
     out = out[COVERAGE_COLUMNS]
-    
+
     return out
+
 
 def write_coverage_csv(df: pd.DataFrame, output_path: str) -> None:
     df.to_csv(output_path, index=False)

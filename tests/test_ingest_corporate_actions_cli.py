@@ -1,4 +1,5 @@
 import json
+from pathlib import Path
 
 import pytest
 
@@ -106,6 +107,13 @@ def test_cli_argument_parsing_for_required_arguments(tmp_path):
     assert args.output_root == str(tmp_path)
     assert args.sort == "desc"
     assert args.limit == 250
+
+
+def test_console_script_entry_point_is_declared_in_pyproject():
+    pyproject = Path("pyproject.toml").read_text(encoding="utf-8")
+
+    assert "[project.scripts]" in pyproject
+    assert 'fintech-ingest-corporate-actions = "src.cli.ingest_corporate_actions:main"' in pyproject
 
 
 def test_successful_mocked_ingestion_writes_expected_files(tmp_path):

@@ -40,6 +40,17 @@ Credentials are required only for live API usage. The unit tests and example scr
 Run dividend corporate-actions ingestion with:
 
 ```bash
+fintech-ingest-corporate-actions \
+  --symbols AAPL MSFT SPY \
+  --start 2024-01-01 \
+  --end 2024-12-31 \
+  --types cash_dividend stock_dividend \
+  --output-root data/curated/corporate_actions/dividends
+```
+
+The existing module invocation is still supported:
+
+```bash
 python -m src.cli.ingest_corporate_actions \
   --symbols AAPL MSFT SPY \
   --start 2024-01-01 \
@@ -59,6 +70,12 @@ Supported arguments:
 | `--output-root` | Curated dividends dataset root. Defaults to `data/curated/corporate_actions/dividends`. |
 | `--sort` | Alpaca sort order. Defaults to `asc`. |
 | `--limit` | Alpaca page size limit. Defaults to `1000`. |
+
+After an editable or wheel install, the package also exposes the console script:
+
+```bash
+fintech-ingest-corporate-actions --help
+```
 
 The command prints a JSON summary with:
 

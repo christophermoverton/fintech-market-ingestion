@@ -11,7 +11,6 @@ from dotenv import load_dotenv
 
 from src.ingestion.alpaca_client import AlpacaConfig
 
-
 SUPPORTED_DIVIDEND_ACTION_TYPES = frozenset({"cash_dividend", "stock_dividend"})
 SUPPORTED_SORT_ORDERS = frozenset({"asc", "desc"})
 
@@ -212,7 +211,9 @@ def _validate_action_types(types: Iterable[str]) -> None:
     unsupported = sorted(set(types) - SUPPORTED_DIVIDEND_ACTION_TYPES)
     if unsupported:
         supported = ", ".join(sorted(SUPPORTED_DIVIDEND_ACTION_TYPES))
-        raise ValueError(f"Unsupported corporate action type(s): {unsupported}. Supported: {supported}")
+        raise ValueError(
+            f"Unsupported corporate action type(s): {unsupported}. Supported: {supported}"
+        )
 
 
 def _validate_limit(limit: int) -> None:

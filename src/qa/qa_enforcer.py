@@ -49,14 +49,15 @@ from typing import Dict, List, Optional, Union
 
 import pandas as pd
 
-
 # -----------------------------
 # Data structures / contracts
 # -----------------------------
 
+
 @dataclass(frozen=True)
 class Thresholds:
     """Configurable strict-mode thresholds."""
+
     max_duplicate_keys: int = 0
     max_ohlc_violations: int = 0
 
@@ -69,6 +70,7 @@ class Thresholds:
 @dataclass(frozen=True)
 class SymbolOffense:
     """Per-symbol breakdown for CI-friendly summaries."""
+
     symbol: str
     duplicate_keys: int = 0
     ohlc_violations: int = 0
@@ -81,6 +83,7 @@ class QAMetrics:
     """
     Minimal interface for enforcement, aligned to your exported schema.
     """
+
     dataset: str
     timeframe: str  # e.g. "1Min" or "1D"
     start: str
@@ -101,6 +104,7 @@ class QAMetrics:
 @dataclass(frozen=True)
 class EnforcerResult:
     """Structured result to support CLI printing and unit tests."""
+
     passed: bool
     reasons: List[str]
     exit_code: int
@@ -110,6 +114,7 @@ class EnforcerResult:
 # -----------------------------
 # Public API
 # -----------------------------
+
 
 def enforce(
     metrics: QAMetrics,
@@ -145,8 +150,7 @@ def enforce(
     if thresholds.max_gap_count is not None and metrics.total_gap_count is not None:
         if metrics.total_gap_count > thresholds.max_gap_count:
             reasons.append(
-                f"Gap count: {metrics.total_gap_count} "
-                f"(threshold: {thresholds.max_gap_count})"
+                f"Gap count: {metrics.total_gap_count} (threshold: {thresholds.max_gap_count})"
             )
 
     if thresholds.min_coverage_pct is not None and metrics.min_coverage_pct_observed is not None:
@@ -281,9 +285,7 @@ def load_metrics_from_exports(
     # Totals used for enforcement
     # Duplicate keys: sum per-symbol duplicate_keys
     total_duplicate_keys = (
-        int(bsdf["duplicate_keys"].fillna(0).sum())
-        if "duplicate_keys" in bsdf.columns
-        else 0
+        int(bsdf["duplicate_keys"].fillna(0).sum()) if "duplicate_keys" in bsdf.columns else 0
     )
 
     # OHLC violations: authoritative global total
@@ -315,6 +317,7 @@ def load_metrics_from_exports(
         by_symbol=by_symbol_map,
     )
 
+
 def build_metrics_from_dataframes(
     *,
     by_symbol_df: pd.DataFrame,
@@ -339,10 +342,16 @@ def build_metrics_from_dataframes(
                 duplicate_keys=int(r.get("duplicate_keys", 0) or 0),
                 ohlc_violations=int(r.get("ohlc_violation_count", 0) or 0),
                 gap_count=int(r.get("gap_count", 0) or 0),
-                coverage_pct=float(r["coverage_pct"]) if "coverage_pct" in by_symbol_df.columns and pd.notna(r["coverage_pct"]) else None,
+                coverage_pct=float(r["coverage_pct"])
+                if "coverage_pct" in by_symbol_df.columns and pd.notna(r["coverage_pct"])
+                else None,
             )
 
-    total_duplicate_keys = int(by_symbol_df["duplicate_keys"].fillna(0).sum()) if "duplicate_keys" in by_symbol_df.columns else 0
+    total_duplicate_keys = (
+        int(by_symbol_df["duplicate_keys"].fillna(0).sum())
+        if "duplicate_keys" in by_symbol_df.columns
+        else 0
+    )
     total_ohlc_violations = int(g.get("total_ohlc_violation_count", 0) or 0)
     total_gap_count = int(g.get("total_gap_count", 0) or 0)
 
@@ -369,9 +378,12 @@ def build_metrics_from_dataframes(
         missing_symbols=missing_symbols,
         by_symbol=by_symbol_map if by_symbol_map else None,
     )
+
+
 # -----------------------------
 # Helpers
 # -----------------------------
+
 
 def _parse_missing_symbols(value) -> Optional[List[str]]:
     """
@@ -412,7 +424,8 @@ def _rank_top_offenders(
         reverse=True,
     )
     offenders = [
-        o for o in offenders
+        o
+        for o in offenders
         if (o.duplicate_keys > 0) or (o.ohlc_violations > 0) or (o.gap_count > 0)
     ]
     return offenders[:top_n]
@@ -454,8 +467,7 @@ def _emit_summary(
 
     if thresholds.max_gap_count is not None and metrics.total_gap_count is not None:
         lines.append(
-            f"Gap count: {metrics.total_gap_count} "
-            f"(threshold: {thresholds.max_gap_count})"
+            f"Gap count: {metrics.total_gap_count} (threshold: {thresholds.max_gap_count})"
         )
 
     if thresholds.min_coverage_pct is not None and metrics.min_coverage_pct_observed is not None:

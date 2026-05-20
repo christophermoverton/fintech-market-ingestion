@@ -6,14 +6,12 @@ import sys
 from pathlib import Path
 from typing import Sequence
 
-
 REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from src.cli.ingest_corporate_actions import ingest_dividend_corporate_actions
 from src.ingestion.alpaca_corporate_actions_client import CorporateActionRecord
-
 
 DEFAULT_EXAMPLE_OUTPUT_ROOT = Path("artifacts/examples/corporate_actions_dividends")
 

@@ -13,7 +13,6 @@ from src.ingestion.corporate_actions_normalization import (
     corporate_action_sort_key,
 )
 
-
 DEFAULT_DIVIDEND_CORPORATE_ACTIONS_ROOT = Path("data/curated/corporate_actions/dividends")
 DIVIDEND_DATASET_FILENAME = "dividends.parquet"
 DIVIDEND_METADATA_FILENAME = "metadata.json"
@@ -125,7 +124,9 @@ def read_dividend_corporate_actions_metadata(
     return json.loads(metadata_path.read_text(encoding="utf-8"))
 
 
-def dividend_event_key(record: NormalizedDividendRecord) -> tuple[str, str, str, Optional[str], Optional[str]]:
+def dividend_event_key(
+    record: NormalizedDividendRecord,
+) -> tuple[str, str, str, Optional[str], Optional[str]]:
     return (
         record.corporate_action_id,
         record.symbol,
@@ -141,13 +142,17 @@ def _coerce_records(
     return [_coerce_record(record) for record in records]
 
 
-def _coerce_record(record: NormalizedDividendRecord | Mapping[str, Any]) -> NormalizedDividendRecord:
+def _coerce_record(
+    record: NormalizedDividendRecord | Mapping[str, Any],
+) -> NormalizedDividendRecord:
     if isinstance(record, NormalizedDividendRecord):
         return record
     return NormalizedDividendRecord(**dict(record))
 
 
-def _deduplicate_records(records: Sequence[NormalizedDividendRecord]) -> list[NormalizedDividendRecord]:
+def _deduplicate_records(
+    records: Sequence[NormalizedDividendRecord],
+) -> list[NormalizedDividendRecord]:
     by_key: dict[tuple[str, str, str, Optional[str], Optional[str]], NormalizedDividendRecord] = {}
     for record in sorted(
         records,
@@ -182,7 +187,9 @@ def _build_metadata(
 ) -> dict[str, Any]:
     inferred_sources = sorted({record.source for record in records})
     inferred_action_types = sorted({record.corporate_action_type for record in records})
-    requested_action_types = sorted(action_types) if action_types is not None else inferred_action_types
+    requested_action_types = (
+        sorted(action_types) if action_types is not None else inferred_action_types
+    )
     metadata_source = source or (inferred_sources[0] if len(inferred_sources) == 1 else None)
     duplicate_count = input_record_count - len(records)
 

@@ -2,6 +2,8 @@
 
 A production-style market data ingestion and validation framework for historical OHLCV bars (Daily + 1-Minute) using Alpaca market data. The pipeline writes curated, partitioned Parquet datasets and provides a structured QA layer with artifact-based observability and optional strict enforcement suitable for CI gating and trading research workflows.
 
+For setup, packaging, linting, build validation, and future publishing boundaries, see [docs/packaging_pypi_readiness.md](docs/packaging_pypi_readiness.md). For the focused M4 validation checklist, see [docs/m4_release_readiness.md](docs/m4_release_readiness.md).
+
 ---
 
 ## Architecture Overview
@@ -99,6 +101,17 @@ stock_dividend
 Live CLI usage:
 
 ```bash
+fintech-ingest-corporate-actions \
+  --symbols AAPL MSFT SPY \
+  --start 2024-01-01 \
+  --end 2024-12-31 \
+  --types cash_dividend stock_dividend \
+  --output-root data/curated/corporate_actions/dividends
+```
+
+The existing module invocation remains supported:
+
+```bash
 python -m src.cli.ingest_corporate_actions \
   --symbols AAPL MSFT SPY \
   --start 2024-01-01 \
@@ -115,6 +128,27 @@ data/curated/corporate_actions/dividends/metadata.json
 ```
 
 For the full schema, metadata contract, CLI arguments, and a CI-safe sample-data example, see `docs/corporate_actions_dividends.md`.
+
+---
+
+## Packaging and Developer Setup
+
+The preferred contributor workflow is editable install with the development dependency group:
+
+```bash
+python -m pip install -e ".[dev]"
+```
+
+That setup supports the installed console script and the existing module invocation:
+
+```bash
+fintech-ingest-corporate-actions --help
+python -m src.cli.ingest_corporate_actions --help
+```
+
+For a full packaging and PyPI-readiness walkthrough, including validation commands, build inspection, and cleanup, see [docs/packaging_pypi_readiness.md](docs/packaging_pypi_readiness.md). The M4 deterministic release-readiness checklist lives in [docs/m4_release_readiness.md](docs/m4_release_readiness.md).
+
+If you need a frozen environment for reproduction, `requirements.txt` is available as an optional path, but it is not the preferred development workflow for contributors.
 
 ---
 
@@ -278,18 +312,95 @@ python -m venv venv
 .\venv\Scripts\activate
 ```
 
-### 2) Install Dependencies
+### 2) Install Editable Package + Development Tools
+
+For local development, install the project in editable mode with the optional
+development dependencies:
 
 ```bash
-pip install -r requirements.txt
+python -m pip install -e ".[dev]"
 ```
 
-### 3) Export Dependencies (when updating your environment)
+This keeps the current `src.*` import layout available while preparing the
+project for standard Python build tooling.
+
+### 3) Install Frozen Environment (optional)
+
+`requirements.txt` records a fuller pinned working environment, including
+notebook and exploratory tooling. Use it when you need to reproduce that exact
+environment:
+
+```bash
+python -m pip install -r requirements.txt
+```
+
+### 4) Export Dependencies (when updating your environment)
 
 If you install new packages and want to pin exact versions:
 
 ```bash
 pip freeze > requirements.txt
+```
+
+### 5) Lint and Format Checks
+
+Ruff provides the baseline lint and formatting checks for M4 quality gates:
+
+```bash
+ruff check src tests examples
+ruff format --check src tests examples
+```
+
+To apply Ruff formatting locally:
+
+```bash
+ruff format src tests examples
+```
+
+### 6) Package Build Validation
+
+Build the source distribution and wheel locally before any release preparation:
+
+```bash
+python -m build
+```
+
+Build outputs are written under `dist/`. Inspect artifact contents before any
+future TestPyPI or PyPI publishing step:
+
+```bash
+tar tf dist/*.tar.gz
+python -m zipfile --list dist/*.whl
+```
+
+PowerShell inspection alternatives:
+
+```powershell
+Get-ChildItem dist\*.tar.gz | ForEach-Object { tar tf $_.FullName }
+Get-ChildItem dist\*.whl | ForEach-Object { python -m zipfile --list $_.FullName }
+```
+
+The package artifacts must not include credentials, `.env`, generated datasets,
+local artifacts, reports, caches, virtual environments, or build outputs.
+
+Optional wheel smoke test:
+
+```bash
+python -m pip install dist/*.whl
+python -m src.cli.ingest_corporate_actions --help
+```
+
+Clean generated build artifacts when finished:
+
+```bash
+rm -rf dist build *.egg-info
+```
+
+PowerShell equivalent:
+
+```powershell
+Remove-Item -Recurse -Force dist, build -ErrorAction SilentlyContinue
+Remove-Item -Recurse -Force *.egg-info -ErrorAction SilentlyContinue
 ```
 
 ---
