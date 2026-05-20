@@ -125,6 +125,18 @@ Remove-Item -Recurse -Force *.egg-info -ErrorAction SilentlyContinue
 - Real PyPI publishing must be explicitly approved separately.
 - Prefer credential-safe publishing patterns later, once release policy is defined.
 
+## Patch Release Notes
+
+### 0.5.1
+
+- Fixed Alpaca nested corporate-actions dividend response support for
+  `cash_dividends` and `stock_dividends` payloads.
+- Added an explicit cash-dividend missing-currency policy: omitted Alpaca
+  currency defaults the normalized cash-dividend `currency` field to `USD`.
+- Added metadata counters for nested response detection and cash-dividend
+  currency defaulting.
+- Preserved existing flat/list corporate-actions response compatibility.
+
 ## Secure Publishing Workflow
 
 The manual GitHub Actions workflow at `.github/workflows/publish-package.yml` validates, builds, uploads package artifacts for review, and publishes to TestPyPI only.
