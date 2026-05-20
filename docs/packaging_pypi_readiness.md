@@ -28,14 +28,21 @@ python -m pip install -e ".[dev]"
 
 ## Validation Commands
 
-Run the local packaging and quality gates with:
+After installing the development dependencies, run the local validation wrapper:
 
 ```bash
-pytest tests -q
-pytest tests/test_m3_corporate_actions_validation.py -q
-ruff check src tests examples
-ruff format --check src tests examples
-python -m build
+python scripts/validate.py
+```
+
+The wrapper mirrors the standard CI checks and runs the local packaging and
+quality gates:
+
+```bash
+python -m pytest tests -q
+python -m pytest tests/test_m3_corporate_actions_validation.py -q
+python -m ruff check src tests examples
+python -m ruff format --check src tests examples
+python -m py_compile src/cli/ingest_corporate_actions.py
 python -m src.cli.ingest_corporate_actions --help
 fintech-ingest-corporate-actions --help
 ```
@@ -57,10 +64,10 @@ python -m pip install -U pip
 python -m pip install -e ".[dev]"
 ```
 
-The workflow runs the full tests, the focused M3 corporate-actions regression
-tests, Ruff lint and format checks, `py_compile`, and both corporate-actions CLI
-help smoke checks. It does not publish packages and does not require live Alpaca
-credentials.
+The workflow invokes `python scripts/validate.py`, which runs the full tests,
+the focused M3 corporate-actions regression tests, Ruff lint and format checks,
+`py_compile`, and both corporate-actions CLI help smoke checks. It does not
+publish packages and does not require live Alpaca credentials.
 
 ## CLI Smoke Checks
 
