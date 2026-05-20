@@ -105,6 +105,11 @@ dividend groups under `corporate_actions.cash_dividends` and
 cash-dividend rows defaults the normalized `currency` field to `USD`, with the
 defaulting count recorded in dividend metadata.
 
+Patch release `0.5.1` includes this nested Alpaca dividend response support,
+the explicit cash-dividend missing-currency policy, metadata counters for
+nested responses and currency defaulting, and preserved flat/list response
+compatibility.
+
 Live CLI usage:
 
 ```bash
