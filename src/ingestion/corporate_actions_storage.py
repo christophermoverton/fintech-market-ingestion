@@ -9,6 +9,7 @@ from typing import Any, Mapping, Optional, Sequence
 import pandas as pd
 
 from src.ingestion.corporate_actions_normalization import (
+    CURRENCY_POLICY,
     NormalizedDividendRecord,
     corporate_action_sort_key,
 )
@@ -192,6 +193,23 @@ def _build_metadata(
     )
     metadata_source = source or (inferred_sources[0] if len(inferred_sources) == 1 else None)
     duplicate_count = input_record_count - len(records)
+    currency_missing_for_cash_dividend_count = sum(
+        1
+        for record in records
+        if record.corporate_action_type == "cash_dividend" and _raw_currency_missing(record.raw)
+    )
+    nested_cash_dividend_count = sum(
+        1
+        for record in records
+        if record.corporate_action_type == "cash_dividend"
+        and record.raw.get("_alpaca_dividend_response_key") == "cash_dividends"
+    )
+    nested_stock_dividend_count = sum(
+        1
+        for record in records
+        if record.corporate_action_type == "stock_dividend"
+        and record.raw.get("_alpaca_dividend_response_key") == "stock_dividends"
+    )
 
     return {
         "dataset": "corporate_actions_dividends",
@@ -208,7 +226,21 @@ def _build_metadata(
         "duplicate_record_count": duplicate_count,
         "duplicate_handling": "deduplicate_by_event_key_keep_highest_payload_hash",
         "event_key": DIVIDEND_EVENT_KEY_COLUMNS,
+        "currency_policy": CURRENCY_POLICY,
+        "currency_missing_for_cash_dividend_count": currency_missing_for_cash_dividend_count,
+        "currency_defaulted_for_cash_dividend_count": currency_missing_for_cash_dividend_count,
+        "nested_response_detected": nested_cash_dividend_count > 0
+        or nested_stock_dividend_count > 0,
+        "nested_cash_dividend_count": nested_cash_dividend_count,
+        "nested_stock_dividend_count": nested_stock_dividend_count,
     }
+
+
+def _raw_currency_missing(raw: Mapping[str, Any]) -> bool:
+    value = raw.get("currency")
+    if value is None:
+        return True
+    return isinstance(value, str) and not value.strip()
 
 
 def _json_default(value: Any) -> str:

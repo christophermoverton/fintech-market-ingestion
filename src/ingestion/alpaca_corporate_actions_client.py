@@ -13,6 +13,10 @@ from src.ingestion.alpaca_client import AlpacaConfig
 
 SUPPORTED_DIVIDEND_ACTION_TYPES = frozenset({"cash_dividend", "stock_dividend"})
 SUPPORTED_SORT_ORDERS = frozenset({"asc", "desc"})
+DIVIDEND_RESPONSE_KEYS = (
+    ("cash_dividends", "cash_dividend"),
+    ("stock_dividends", "stock_dividend"),
+)
 
 
 @dataclass(frozen=True)
@@ -164,7 +168,7 @@ class AlpacaCorporateActionsClient:
                 params.pop("page_token", None)
 
             payload = self._request_with_retries(url, params=params)
-            rows = payload.get("corporate_actions") or []
+            rows = _extract_corporate_action_payloads(payload)
             all_records.extend(CorporateActionRecord.from_payload(row) for row in rows)
 
             page_token = payload.get("next_page_token")
@@ -224,3 +228,46 @@ def _validate_limit(limit: int) -> None:
 def _validate_sort(sort: str) -> None:
     if sort not in SUPPORTED_SORT_ORDERS:
         raise ValueError("sort must be either 'asc' or 'desc'")
+
+
+def _extract_corporate_action_payloads(payload: Dict[str, Any]) -> List[Dict[str, Any]]:
+    """Return flat dividend rows from Alpaca's flat or nested response shapes."""
+    corporate_actions = payload.get("corporate_actions")
+    if isinstance(corporate_actions, list):
+        return [_copy_mapping(row) for row in corporate_actions]
+    if isinstance(corporate_actions, dict):
+        return _flatten_dividend_groups(corporate_actions, nested_response=True)
+
+    nested_rows = _flatten_dividend_groups(payload, nested_response=True)
+    if nested_rows:
+        return nested_rows
+
+    return []
+
+
+def _flatten_dividend_groups(
+    groups: Dict[str, Any],
+    nested_response: bool,
+) -> List[Dict[str, Any]]:
+    rows: List[Dict[str, Any]] = []
+    for response_key, action_type in DIVIDEND_RESPONSE_KEYS:
+        group_rows = groups.get(response_key) or []
+        if not isinstance(group_rows, list):
+            raise RuntimeError(
+                f"Unexpected Alpaca corporate-actions response group: {response_key}={group_rows!r}"
+            )
+        for row in group_rows:
+            original_row = _copy_mapping(row)
+            normalized_row = dict(original_row)
+            normalized_row["type"] = action_type
+            normalized_row["_alpaca_dividend_response_key"] = response_key
+            normalized_row["_alpaca_nested_response"] = nested_response
+            normalized_row["_alpaca_original_payload"] = original_row
+            rows.append(normalized_row)
+    return rows
+
+
+def _copy_mapping(row: Any) -> Dict[str, Any]:
+    if not isinstance(row, dict):
+        raise RuntimeError(f"Unexpected Alpaca corporate-actions row: {row!r}")
+    return dict(row)

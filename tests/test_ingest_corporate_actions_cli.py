@@ -4,7 +4,11 @@ from pathlib import Path
 import pytest
 
 from src.cli import ingest_corporate_actions as cli
-from src.ingestion.alpaca_corporate_actions_client import CorporateActionRecord
+from src.ingestion.alpaca_client import AlpacaConfig
+from src.ingestion.alpaca_corporate_actions_client import (
+    AlpacaCorporateActionsClient,
+    CorporateActionRecord,
+)
 from src.ingestion.corporate_actions_storage import (
     DIVIDEND_DATASET_FILENAME,
     DIVIDEND_METADATA_FILENAME,
@@ -34,6 +38,28 @@ class FakeCorporateActionsClient:
         if sort not in {"asc", "desc"}:
             raise ValueError("sort must be either 'asc' or 'desc'")
         return self.records
+
+
+class FakeAlpacaResponse:
+    def __init__(self, payload):
+        self._payload = payload
+        self.status_code = 200
+        self.text = ""
+
+    def json(self):
+        return self._payload
+
+    def raise_for_status(self):
+        return None
+
+
+class FakeAlpacaSession:
+    def __init__(self, payload):
+        self.headers = {}
+        self.payload = payload
+
+    def get(self, url, params, timeout):
+        return FakeAlpacaResponse(self.payload)
 
 
 def cash_dividend_payload(**overrides):
@@ -74,6 +100,17 @@ def stock_dividend_payload(**overrides):
 
 def ca_record(payload):
     return CorporateActionRecord.from_payload(payload)
+
+
+def alpaca_client_for_payload(payload):
+    cfg = AlpacaConfig(
+        api_key_id="test-key",
+        api_secret_key="test-secret",
+        data_base_url="https://data.alpaca.markets",
+        max_retries=1,
+        timeout_s=5,
+    )
+    return AlpacaCorporateActionsClient(cfg, session=FakeAlpacaSession(payload))
 
 
 def test_cli_argument_parsing_for_required_arguments(tmp_path):
@@ -152,6 +189,43 @@ def test_successful_mocked_ingestion_writes_expected_files(tmp_path):
     assert result.normalized_record_count == 2
     assert result.written_record_count == 2
     assert result.duplicate_record_count == 0
+
+
+def test_cli_client_path_writes_files_from_nested_alpaca_response_fixture(tmp_path):
+    root = tmp_path / "data" / "curated" / "corporate_actions" / "dividends"
+    cash = cash_dividend_payload(id="cash-nested-1", currency=None)
+    cash.pop("type")
+    stock = stock_dividend_payload(id="stock-nested-1")
+    stock.pop("type")
+    client = alpaca_client_for_payload(
+        {
+            "corporate_actions": {
+                "cash_dividends": [cash],
+                "stock_dividends": [stock],
+            }
+        }
+    )
+
+    result = cli.ingest_dividend_corporate_actions(
+        symbols=["AAPL"],
+        start="2025-01-01",
+        end="2025-02-28",
+        types=["cash_dividend", "stock_dividend"],
+        output_root=root,
+        client=client,
+    )
+    loaded = read_dividend_corporate_actions(root)
+    metadata = read_dividend_corporate_actions_metadata(root)
+
+    assert (root / DIVIDEND_DATASET_FILENAME).exists()
+    assert (root / DIVIDEND_METADATA_FILENAME).exists()
+    assert result.fetched_record_count == 2
+    assert result.written_record_count == 2
+    assert loaded["corporate_action_type"].tolist() == ["cash_dividend", "stock_dividend"]
+    assert loaded.loc[0, "currency"] == "USD"
+    assert json.loads(loaded.loc[0, "raw"])["_alpaca_dividend_response_key"] == "cash_dividends"
+    assert metadata["nested_response_detected"] is True
+    assert metadata["currency_defaulted_for_cash_dividend_count"] == 1
 
 
 def test_empty_api_result_writes_empty_dataset_and_metadata(tmp_path):

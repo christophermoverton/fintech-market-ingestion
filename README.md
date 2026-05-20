@@ -98,6 +98,13 @@ cash_dividend
 stock_dividend
 ```
 
+The corporate-actions client supports both flat Alpaca responses and nested
+dividend groups under `corporate_actions.cash_dividends` and
+`corporate_actions.stock_dividends`. Top-level `cash_dividends` and
+`stock_dividends` groups are also accepted. Missing Alpaca currency on
+cash-dividend rows defaults the normalized `currency` field to `USD`, with the
+defaulting count recorded in dividend metadata.
+
 Live CLI usage:
 
 ```bash

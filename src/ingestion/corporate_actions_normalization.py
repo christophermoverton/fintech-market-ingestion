@@ -11,6 +11,9 @@ from src.ingestion.alpaca_corporate_actions_client import (
     CorporateActionRecord,
 )
 
+CASH_DIVIDEND_MISSING_CURRENCY_DEFAULT = "USD"
+CURRENCY_POLICY = "cash_dividend_missing_currency_defaults_to_USD"
+
 
 @dataclass(frozen=True)
 class NormalizedDividendRecord:
@@ -85,7 +88,7 @@ def normalize_corporate_action_payload(
         payable_date=_optional_date(raw, "payable_date"),
         cash_amount=_optional_float(raw, "cash_amount"),
         stock_amount=_optional_float(raw, "stock_amount"),
-        currency=_optional_string(raw, "currency"),
+        currency=_normalize_currency(raw, corporate_action_type),
         source_payload_hash=hash_source_payload(raw),
         raw=raw,
     )
@@ -144,6 +147,13 @@ def _optional_string(payload: Mapping[str, Any], field: str) -> Optional[str]:
         return None
     normalized = str(value).strip()
     return normalized or None
+
+
+def _normalize_currency(payload: Mapping[str, Any], corporate_action_type: str) -> Optional[str]:
+    currency = _optional_string(payload, "currency")
+    if currency is None and corporate_action_type == "cash_dividend":
+        return CASH_DIVIDEND_MISSING_CURRENCY_DEFAULT
+    return currency
 
 
 def _optional_date(payload: Mapping[str, Any], field: str) -> Optional[str]:

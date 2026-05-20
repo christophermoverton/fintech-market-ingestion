@@ -187,6 +187,42 @@ def test_metadata_includes_source_window_types_and_counts(tmp_path):
         "ex_date",
         "process_date",
     ]
+    assert metadata["currency_policy"] == "cash_dividend_missing_currency_defaults_to_USD"
+    assert metadata["currency_missing_for_cash_dividend_count"] == 0
+    assert metadata["currency_defaulted_for_cash_dividend_count"] == 0
+    assert metadata["nested_response_detected"] is False
+    assert metadata["nested_cash_dividend_count"] == 0
+    assert metadata["nested_stock_dividend_count"] == 0
+
+
+def test_metadata_reports_missing_cash_dividend_currency_defaulting_and_nested_counts(tmp_path):
+    root = tmp_path / "data" / "curated" / "corporate_actions" / "dividends"
+    records = [
+        normalized(
+            cash_dividend_payload(
+                currency=None,
+                _alpaca_dividend_response_key="cash_dividends",
+                _alpaca_nested_response=True,
+            )
+        ),
+        normalized(
+            stock_dividend_payload(
+                _alpaca_dividend_response_key="stock_dividends",
+                _alpaca_nested_response=True,
+            )
+        ),
+    ]
+
+    write_dividend_corporate_actions(records, root_dir=root)
+    metadata = read_dividend_corporate_actions_metadata(root)
+    loaded = read_dividend_corporate_actions(root)
+
+    assert loaded.loc[0, "currency"] == "USD"
+    assert metadata["currency_missing_for_cash_dividend_count"] == 1
+    assert metadata["currency_defaulted_for_cash_dividend_count"] == 1
+    assert metadata["nested_response_detected"] is True
+    assert metadata["nested_cash_dividend_count"] == 1
+    assert metadata["nested_stock_dividend_count"] == 1
 
 
 def test_raw_payload_and_hash_survive_persistence(tmp_path):
