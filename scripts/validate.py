@@ -53,6 +53,7 @@ def main() -> int:
     python = sys.executable
     try:
         steps: list[tuple[str, list[str | Path]]] = [
+            ("Run repository hygiene checks", [python, "scripts/check_repo_hygiene.py"]),
             ("Run full test suite", [python, "-m", "pytest", "tests", "-q"]),
             (
                 "Run M3 corporate-actions regression validation",

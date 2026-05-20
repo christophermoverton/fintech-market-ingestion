@@ -34,10 +34,11 @@ After installing the development dependencies, run the local validation wrapper:
 python scripts/validate.py
 ```
 
-The wrapper mirrors the standard CI checks and runs the local packaging and
-quality gates:
+The wrapper mirrors the standard CI checks and runs repository hygiene checks,
+local packaging checks, and quality gates:
 
 ```bash
+python scripts/check_repo_hygiene.py
 python -m pytest tests -q
 python -m pytest tests/test_m3_corporate_actions_validation.py -q
 python -m ruff check src tests examples
@@ -48,6 +49,11 @@ fintech-ingest-corporate-actions --help
 ```
 
 These checks do not require live Alpaca credentials.
+
+The hygiene check validates tracked files only. It fails on CRLF line endings in
+normalized text files, generated or local-only files tracked by Git, obvious
+local absolute paths, and obvious credential files such as `.env`. It does not
+require network access or Alpaca credentials.
 
 ## Cross-Platform CI
 

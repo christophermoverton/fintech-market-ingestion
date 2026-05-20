@@ -152,6 +152,14 @@ Run the cross-platform validation wrapper before opening a pull request:
 python scripts/validate.py
 ```
 
+The wrapper includes repository hygiene checks for LF line endings, generated
+outputs accidentally tracked by Git, local absolute paths, and credential files.
+You can run those checks directly with:
+
+```bash
+python scripts/check_repo_hygiene.py
+```
+
 To smoke-test the built wheel locally without publishing:
 
 ```bash
