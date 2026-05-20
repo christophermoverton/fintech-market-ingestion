@@ -42,6 +42,26 @@ fintech-ingest-corporate-actions --help
 
 These checks do not require live Alpaca credentials.
 
+## Cross-Platform CI
+
+The standard GitHub Actions workflow at `.github/workflows/ci.yml` runs the
+same credential-free contributor validation path on pull requests and pushes to
+`main` and `feature/m*` branches.
+
+The CI matrix validates Python 3.10, 3.11, and 3.12 on Ubuntu, plus Python 3.12
+on Windows and macOS. It installs the package with the editable development
+dependency path:
+
+```bash
+python -m pip install -U pip
+python -m pip install -e ".[dev]"
+```
+
+The workflow runs the full tests, the focused M3 corporate-actions regression
+tests, Ruff lint and format checks, `py_compile`, and both corporate-actions CLI
+help smoke checks. It does not publish packages and does not require live Alpaca
+credentials.
+
 ## CLI Smoke Checks
 
 The corporate-actions ingestion CLI supports both invocation styles:
