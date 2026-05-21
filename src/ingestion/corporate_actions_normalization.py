@@ -86,7 +86,7 @@ def normalize_corporate_action_payload(
         ex_date=_optional_date(raw, "ex_date"),
         record_date=_optional_date(raw, "record_date"),
         payable_date=_optional_date(raw, "payable_date"),
-        cash_amount=_optional_float(raw, "cash_amount"),
+        cash_amount=_normalize_cash_amount(raw, corporate_action_type),
         stock_amount=_optional_float(raw, "stock_amount"),
         currency=_normalize_currency(raw, corporate_action_type),
         source_payload_hash=hash_source_payload(raw),
@@ -154,6 +154,18 @@ def _normalize_currency(payload: Mapping[str, Any], corporate_action_type: str) 
     if currency is None and corporate_action_type == "cash_dividend":
         return CASH_DIVIDEND_MISSING_CURRENCY_DEFAULT
     return currency
+
+
+def _normalize_cash_amount(
+    payload: Mapping[str, Any],
+    corporate_action_type: str,
+) -> Optional[float]:
+    cash_amount = _optional_float(payload, "cash_amount")
+    if cash_amount is not None:
+        return cash_amount
+    if corporate_action_type == "cash_dividend":
+        return _optional_float(payload, "rate")
+    return None
 
 
 def _optional_date(payload: Mapping[str, Any], field: str) -> Optional[str]:

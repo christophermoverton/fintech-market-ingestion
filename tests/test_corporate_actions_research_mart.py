@@ -57,6 +57,74 @@ def normalized(payload):
     return normalize_corporate_action_payload(payload)
 
 
+def test_research_mart_preserves_quarterly_cash_dividend_amounts(tmp_path):
+    snapshot_root = tmp_path / "data" / "curated" / "corporate_actions" / "dividends"
+    research_root = tmp_path / "data" / "research" / "corporate_actions" / "dividends"
+    quarterly_payloads = [
+        cash_dividend_payload(
+            id="aapl-dividend-2024-02",
+            ex_date="2024-02-09",
+            record_date="2024-02-12",
+            payable_date="2024-02-15",
+            process_date="2024-02-15",
+            rate=0.24,
+            cash_amount=None,
+        ),
+        cash_dividend_payload(
+            id="aapl-dividend-2024-05",
+            ex_date="2024-05-10",
+            record_date="2024-05-13",
+            payable_date="2024-05-16",
+            process_date="2024-05-16",
+            rate=0.25,
+            cash_amount=None,
+        ),
+        cash_dividend_payload(
+            id="aapl-dividend-2024-08",
+            ex_date="2024-08-12",
+            record_date="2024-08-12",
+            payable_date="2024-08-15",
+            process_date="2024-08-15",
+            rate=0.25,
+            cash_amount=None,
+        ),
+        cash_dividend_payload(
+            id="aapl-dividend-2024-11",
+            ex_date="2024-11-08",
+            record_date="2024-11-11",
+            payable_date="2024-11-14",
+            process_date="2024-11-14",
+            rate=0.25,
+            cash_amount=None,
+        ),
+    ]
+    records = [normalized(payload) for payload in quarterly_payloads]
+
+    assert len(records) == 4
+    assert [record.cash_amount for record in records] == [0.24, 0.25, 0.25, 0.25]
+
+    snapshot_result = write_dividend_corporate_actions(
+        records,
+        root_dir=snapshot_root,
+        ingest_start_date="2024-01-01",
+        ingest_end_date="2024-12-31",
+        source="alpaca",
+        action_types=["cash_dividend"],
+    )
+    snapshot_loaded = read_dividend_corporate_actions(snapshot_root)
+    mart_result = write_dividend_research_mart_from_snapshot(snapshot_root, research_root)
+    research_loaded = read_dividend_research_mart(research_root)
+
+    assert snapshot_result.written_record_count == 4
+    assert mart_result.written_record_count == 4
+    assert len(snapshot_loaded) == 4
+    assert len(research_loaded) == 4
+    assert research_loaded["symbol"].tolist() == ["AAPL", "AAPL", "AAPL", "AAPL"]
+    assert research_loaded["year"].tolist() == [2024, 2024, 2024, 2024]
+    assert research_loaded["cash_amount"].notna().all()
+    assert research_loaded["cash_amount"].tolist() == [0.24, 0.25, 0.25, 0.25]
+
+
 def test_research_mart_writes_partitioned_output_by_symbol_and_year(tmp_path):
     root = tmp_path / DEFAULT_DIVIDEND_RESEARCH_MART_ROOT
     records = [

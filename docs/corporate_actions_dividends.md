@@ -500,6 +500,11 @@ group key so downstream QA can distinguish `cash_dividends` from
 payload before the client inferred `corporate_action_type`. `source_payload_hash`
 is a deterministic hash of the raw source payload.
 
+For `cash_dividend` records, normalized `cash_amount` uses Alpaca `cash_amount`
+when present. If `cash_amount` is absent or null and Alpaca provides `rate`, the
+normalizer uses `rate` as the cash amount while preserving the original payload
+unchanged in `raw`.
+
 ## Currency Policy
 
 Cash-dividend currency behavior is explicit. If Alpaca provides `currency`, the
