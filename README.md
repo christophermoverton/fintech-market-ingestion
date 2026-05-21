@@ -139,6 +139,14 @@ data/curated/corporate_actions/dividends/dividends.parquet
 data/curated/corporate_actions/dividends/metadata.json
 ```
 
+Derived research mart output is also available for symbol and year analysis:
+
+```text
+data/research/corporate_actions/dividends/
+```
+
+The deterministic curated snapshot remains the canonical ingestion output.
+
 For the full schema, metadata contract, CLI arguments, and a CI-safe sample-data example, see `docs/corporate_actions_dividends.md`.
 
 Dividend records are event evidence. See `docs/corporate_actions_dividends.md` for point-in-time research semantics and adjusted-return boundaries.

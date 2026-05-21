@@ -180,6 +180,34 @@ data/curated/corporate_actions/dividends/metadata.json
 
 The Parquet file contains normalized dividend records. The metadata JSON describes the ingestion request and write behavior.
 
+## Dividend Research Mart (Issue #40)
+
+The deterministic snapshot under `data/curated/corporate_actions/dividends/` remains the release-safe ingestion output.
+
+Issue #40 adds a separate derived research mart for symbol and date analysis:
+
+```text
+data/research/corporate_actions/dividends/
+  symbol=<SYMBOL>/
+    year=<YYYY>/
+      *.parquet
+data/research/corporate_actions/dividends/metadata.json
+```
+
+Research mart partition semantics:
+
+* Partition columns: `symbol`, `year`
+* Event anchor: `ex_date`
+* Event anchor source: normalized dividend `ex_date`
+* `year` is derived from `ex_date`
+* Rows missing required partition fields (`symbol`, `ex_date`) are rejected fail-fast
+
+The research mart is generated from canonical normalized dividend fields and does not replace or mutate the deterministic snapshot artifacts. It is intended as a query layout for downstream analytics and future event-window joins.
+
+If partition columns are encoded in Hive directory paths, read from the dataset root so engines reconstruct partition columns during dataset scan.
+
+The research mart still does not implement adjusted prices, total-return reconstruction, dividend reinvestment, or dividend-to-bars join logic. Issue #41 remains the place for dividend-to-bars event-window joins.
+
 ## Normalized Schema
 
 Normalized dividend records include:
