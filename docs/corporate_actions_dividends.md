@@ -282,6 +282,35 @@ Event-window semantics:
 
 The helpers use calendar-day offsets (not trading-calendar offsets). Output rows are deterministic and include prefixed event and bar fields plus derived fields such as `event_date_field`, `event_date`, `event_day_offset`, and `bar_timeframe`.
 
+Join local dividend events to local bar data from the CLI:
+
+```bash
+python -m src.cli.join_dividend_event_windows \
+  --dividend-source research-mart \
+  --research-root data/research/corporate_actions/dividends \
+  --bars-path data/local/synthetic_bars.parquet \
+  --pre-window-days 2 \
+  --post-window-days 2 \
+  --output-path data/research/corporate_actions/dividend_event_windows/event_windows.parquet
+```
+
+After an editable or wheel install, the console script is:
+
+```bash
+fintech-join-dividend-event-windows \
+  --dividend-source research-mart \
+  --research-root data/research/corporate_actions/dividends \
+  --bars-path data/local/synthetic_bars.parquet \
+  --pre-window-days 2 \
+  --post-window-days 2 \
+  --output-path data/research/corporate_actions/dividend_event_windows/event_windows.parquet
+```
+
+The command is local and credential-free. It accepts CSV or Parquet bar inputs,
+can read dividends from the curated snapshot or derived research mart, and can
+optionally write CSV or Parquet joined rows as derived research output. It does
+not mutate canonical dividend snapshots, research marts, or bar inputs.
+
 As with the rest of dividend research support, these joins are derived research views only. They do not implement adjusted prices, total-return reconstruction, dividend reinvestment, or backtest cash-flow logic.
 
 ## Normalized Schema
