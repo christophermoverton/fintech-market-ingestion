@@ -12,12 +12,18 @@ from src.ingestion.corporate_actions_research_mart import (
 )
 from src.ingestion.corporate_actions_storage import DEFAULT_DIVIDEND_CORPORATE_ACTIONS_ROOT
 
+UNSAFE_RESEARCH_ROOT_MESSAGE = (
+    "Dividend research mart output must be a derived research path and must not overlap "
+    "with curated/canonical dividend snapshot paths."
+)
+
 
 def build_dividend_research_mart(
     snapshot_root: Path | str = DEFAULT_DIVIDEND_CORPORATE_ACTIONS_ROOT,
     research_root: Path | str = DEFAULT_DIVIDEND_RESEARCH_MART_ROOT,
 ) -> dict[str, Any]:
     """Build the derived dividend research mart from an existing curated snapshot."""
+    _validate_research_root(snapshot_root=snapshot_root, research_root=research_root)
     result = write_dividend_research_mart_from_snapshot(
         snapshot_root=snapshot_root,
         research_root=research_root,
@@ -56,9 +62,27 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     )
     summary_json = _format_summary_json(summary)
     if args.summary_output:
-        Path(args.summary_output).write_text(summary_json, encoding="utf-8")
+        summary_output_path = Path(args.summary_output)
+        summary_output_path.parent.mkdir(parents=True, exist_ok=True)
+        summary_output_path.write_text(summary_json, encoding="utf-8")
     print(summary_json, end="")
     return 0
+
+
+def _validate_research_root(snapshot_root: Path | str, research_root: Path | str) -> None:
+    snapshot_path = _resolve_path(snapshot_root)
+    research_path = _resolve_path(research_root)
+
+    if (
+        research_path == snapshot_path
+        or _is_relative_to(research_path, snapshot_path)
+        or _is_relative_to(snapshot_path, research_path)
+    ):
+        raise ValueError(UNSAFE_RESEARCH_ROOT_MESSAGE)
+
+    parts = [part.lower() for part in research_path.parts]
+    if _contains_curated_data_path(parts) or "canonical" in parts:
+        raise ValueError(UNSAFE_RESEARCH_ROOT_MESSAGE)
 
 
 def _summary_from_result(
@@ -84,6 +108,22 @@ def _summary_from_result(
 
 def _format_summary_json(summary: dict[str, Any]) -> str:
     return json.dumps(summary, sort_keys=True, indent=2, separators=(",", ": ")) + "\n"
+
+
+def _resolve_path(path: Path | str) -> Path:
+    return Path(path).expanduser().resolve(strict=False)
+
+
+def _is_relative_to(path: Path, parent: Path) -> bool:
+    try:
+        path.relative_to(parent)
+    except ValueError:
+        return False
+    return True
+
+
+def _contains_curated_data_path(parts: Sequence[str]) -> bool:
+    return any(left == "data" and right == "curated" for left, right in zip(parts, parts[1:]))
 
 
 if __name__ == "__main__":

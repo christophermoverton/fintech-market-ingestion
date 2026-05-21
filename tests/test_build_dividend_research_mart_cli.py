@@ -173,6 +173,27 @@ def test_main_prints_and_writes_same_deterministic_json(dividend_snapshot, tmp_p
     assert json.loads(stdout)["metadata_path"] == str(research_root / "metadata.json")
 
 
+def test_main_creates_summary_output_parent_directories(dividend_snapshot, tmp_path, capsys):
+    research_root = tmp_path / "data" / "research" / "corporate_actions" / "dividends"
+    summary_output = tmp_path / "nested" / "summaries" / "summary.json"
+
+    exit_code = cli.main(
+        [
+            "--snapshot-root",
+            str(dividend_snapshot),
+            "--research-root",
+            str(research_root),
+            "--summary-output",
+            str(summary_output),
+        ]
+    )
+    stdout = capsys.readouterr().out
+
+    assert exit_code == 0
+    assert summary_output.exists()
+    assert summary_output.read_text(encoding="utf-8") == stdout
+
+
 def test_cli_does_not_mutate_canonical_snapshot_files(dividend_snapshot, tmp_path):
     research_root = tmp_path / "data" / "research" / "corporate_actions" / "dividends"
     data_path = dividend_snapshot / DIVIDEND_DATASET_FILENAME
@@ -199,6 +220,28 @@ def test_cli_requires_no_live_credentials(monkeypatch, dividend_snapshot, tmp_pa
     summary = cli.build_dividend_research_mart(dividend_snapshot, research_root)
 
     assert summary["written_record_count"] == 2
+
+
+def test_cli_rejects_research_root_equal_to_snapshot_root(dividend_snapshot):
+    with pytest.raises(ValueError, match="derived research path.*curated/canonical"):
+        cli.build_dividend_research_mart(dividend_snapshot, dividend_snapshot)
+
+
+def test_cli_rejects_research_root_inside_snapshot_root(dividend_snapshot):
+    with pytest.raises(ValueError, match="derived research path.*curated/canonical"):
+        cli.build_dividend_research_mart(dividend_snapshot, dividend_snapshot / "research")
+
+
+def test_cli_rejects_research_root_containing_snapshot_root(dividend_snapshot):
+    with pytest.raises(ValueError, match="derived research path.*curated/canonical"):
+        cli.build_dividend_research_mart(dividend_snapshot, dividend_snapshot.parent)
+
+
+def test_cli_rejects_curated_research_output_root(dividend_snapshot, tmp_path):
+    curated_research_root = tmp_path / "data" / "curated" / "corporate_actions" / "dividends"
+
+    with pytest.raises(ValueError, match="derived research path.*curated/canonical"):
+        cli.build_dividend_research_mart(dividend_snapshot, curated_research_root)
 
 
 def test_console_script_entry_point_is_declared_and_importable():
