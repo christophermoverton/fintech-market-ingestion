@@ -222,6 +222,17 @@ The metadata records dividend input path, bar input path, event-window config,
 row counts, and schema. Event-window outputs are derived research artifacts, not
 canonical data.
 
+Notebook-style quickstart with synthetic data only:
+
+```bash
+python examples/dividend_research_mart_quickstart.py \
+  --output-root artifacts/examples/dividend_research_mart_quickstart
+```
+
+The quickstart is plain Python and safe for CI. It demonstrates snapshot ->
+research mart -> validation -> event-window join -> derived output metadata
+without calling Alpaca or mutating canonical repository data.
+
 The deterministic curated snapshot remains the canonical ingestion output.
 
 For the full schema, metadata contract, CLI arguments, and a CI-safe sample-data example, see `docs/corporate_actions_dividends.md`.

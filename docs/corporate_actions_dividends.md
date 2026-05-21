@@ -350,6 +350,18 @@ from src.ingestion.dividend_event_window import (
 )
 ```
 
+For a notebook-style quickstart that uses only synthetic local data:
+
+```bash
+python examples/dividend_research_mart_quickstart.py \
+  --output-root artifacts/examples/dividend_research_mart_quickstart
+```
+
+The quickstart is a plain Python script organized into notebook-style sections.
+It demonstrates snapshot -> research mart -> validation -> event-window join ->
+derived output metadata without calling Alpaca or mutating canonical repository
+data.
+
 As with the rest of dividend research support, these joins are derived research views only. They do not implement adjusted prices, total-return reconstruction, dividend reinvestment, or backtest cash-flow logic.
 
 ## Normalized Schema
