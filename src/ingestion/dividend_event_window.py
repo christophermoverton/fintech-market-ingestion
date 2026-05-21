@@ -323,7 +323,7 @@ def read_dividend_event_window_output(
     if not data_path.exists():
         raise FileNotFoundError(f"Dividend event-window data file does not exist: {data_path}")
 
-    return _order_event_window_output_frame(pd.read_parquet(data_path)).reset_index(drop=True)
+    return _order_event_window_output_frame(pd.read_parquet(data_path))
 
 
 def _validate_config(event_date_field: str, pre_window_days: int, post_window_days: int) -> None:
