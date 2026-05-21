@@ -68,6 +68,32 @@ def test_cash_dividend_normalization_from_raw_dictionary():
     assert record.raw == payload
 
 
+def test_cash_dividend_rate_falls_back_to_cash_amount():
+    payload = cash_dividend_payload(
+        id="aapl-dividend-2024-02",
+        ex_date="2024-02-09",
+        record_date="2024-02-12",
+        payable_date="2024-02-15",
+        process_date="2024-02-15",
+        rate=0.24,
+        cash_amount=None,
+    )
+
+    record = normalize_corporate_action_payload(payload)
+
+    assert record.cash_amount == 0.24
+    assert record.raw["rate"] == 0.24
+    assert record.source_payload_hash == hash_source_payload(payload)
+
+
+def test_cash_dividend_cash_amount_takes_precedence_over_rate():
+    payload = cash_dividend_payload(cash_amount="0.26", rate=0.24)
+
+    record = normalize_corporate_action_payload(payload)
+
+    assert record.cash_amount == 0.26
+
+
 def test_stock_dividend_normalization_from_raw_dictionary():
     payload = stock_dividend_payload()
 
