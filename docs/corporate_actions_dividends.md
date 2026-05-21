@@ -208,6 +208,43 @@ If partition columns are encoded in Hive directory paths, read from the dataset 
 
 The research mart still does not implement adjusted prices, total-return reconstruction, dividend reinvestment, or dividend-to-bars join logic. Issue #41 remains the place for dividend-to-bars event-window joins.
 
+## Dividend-to-Bars Event Windows (Issue #41)
+
+Issue #41 adds deterministic research helpers for joining dividend events to bar data without mutating canonical dividend or bar datasets.
+
+Primary helper:
+
+```text
+src.ingestion.dividend_event_window.join_dividend_events_to_bars
+```
+
+Thin convenience helpers are also available for loading dividends from canonical snapshot or research-mart roots before joining:
+
+```text
+join_dividend_snapshot_to_bars
+join_dividend_research_mart_to_bars
+```
+
+Current support focuses on daily-style bar datasets using canonical bar fields (`symbol`, `ts_utc`, `open`, `high`, `low`, `close`, `volume`). Minute-specific window behavior is a future follow-up.
+
+Event-window semantics:
+
+* Default anchor field: `ex_date`
+* `window_start = event_date - pre_window_days`
+* `window_end = event_date + post_window_days`
+* Include bars where `window_start <= bar_date <= window_end`
+* `event_day_offset = bar_date - event_date` in calendar days
+
+`event_day_offset` interpretation:
+
+* negative: pre-event bars
+* zero: event-date bars
+* positive: post-event bars
+
+The helpers use calendar-day offsets (not trading-calendar offsets). Output rows are deterministic and include prefixed event and bar fields plus derived fields such as `event_date_field`, `event_date`, `event_day_offset`, and `bar_timeframe`.
+
+As with the rest of dividend research support, these joins are derived research views only. They do not implement adjusted prices, total-return reconstruction, dividend reinvestment, or backtest cash-flow logic.
+
 ## Normalized Schema
 
 Normalized dividend records include:
