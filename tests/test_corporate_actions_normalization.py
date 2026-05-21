@@ -68,7 +68,7 @@ def test_cash_dividend_normalization_from_raw_dictionary():
     assert record.raw == payload
 
 
-def test_cash_dividend_rate_falls_back_to_cash_amount():
+def test_cash_dividend_cash_amount_falls_back_to_rate():
     payload = cash_dividend_payload(
         id="aapl-dividend-2024-02",
         ex_date="2024-02-09",
