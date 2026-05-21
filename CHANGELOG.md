@@ -5,6 +5,44 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Unreleased
+
+### Added
+
+- **M7 Research Mart Usability, CLI, and Workflow Integration**
+  - Dividend research mart builder CLI: `fintech-build-dividend-research-mart`.
+  - Read-only dividend research mart validation and inspection CLI:
+    `fintech-validate-dividend-research-mart`.
+  - Local dividend-to-bars event-window join CLI:
+    `fintech-join-dividend-event-windows`.
+  - Direct event-window CSV/Parquet output and contract-style derived
+    event-window output with `event_windows.parquet` and `metadata.json`.
+  - Derived event-window writer/reader APIs and deterministic metadata contract
+    for dividend input path, bar input path, event-window config, row counts,
+    schema, and dataset role.
+  - Notebook-style synthetic quickstart:
+    `examples/dividend_research_mart_quickstart.py`.
+  - Scheduler-free pipeline-style synthetic workflow:
+    `examples/dividend_research_pipeline_workflow.py`.
+  - M7 CLI/API parity, smoke, non-mutation, credential-free, and deterministic
+    rerun tests.
+  - M7 README, detailed dividend docs, and release-readiness checklist.
+
+### Preserved
+
+- Curated dividend snapshots remain canonical ingestion artifacts.
+- Dividend research marts and event-window outputs remain derived research
+  artifacts.
+- M7 examples use synthetic local data and do not require Alpaca credentials.
+
+### Not Included
+
+- No adjusted prices.
+- No total-return reconstruction.
+- No dividend reinvestment modeling.
+- No automatic backtest cash-flow behavior.
+- No scheduler, database, registry, dashboard, or service dependency.
+
 ## [0.6.0] — Dividend Research Workflows — 2025-05-20
 
 ### Added

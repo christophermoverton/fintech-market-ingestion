@@ -93,11 +93,10 @@ Dividend records remain canonical event evidence. Any future adjusted-return dat
 
 ### Future Work Boundary
 
-The next likely steps are:
-
-* Issue #40: partitioned dividend research mart
-* Issue #41: dividend-to-bars event-window joins
-* A future adjusted-return issue with a separate derived dataset, explicit input artifacts, deterministic metadata, and no mutation of raw bars or canonical dividend artifacts
+M7 adds the derived research mart, event-window joins, local CLIs, examples, and
+metadata-backed derived event-window outputs. Future adjusted-return work should
+remain a separate derived dataset with explicit input artifacts, deterministic
+metadata, and no mutation of raw bars or canonical dividend artifacts.
 
 If you need these semantics programmatically, see `src.ingestion.dividend_research_semantics` for the current constants.
 
@@ -180,7 +179,21 @@ data/curated/corporate_actions/dividends/metadata.json
 
 The Parquet file contains normalized dividend records. The metadata JSON describes the ingestion request and write behavior.
 
-## Dividend Research Mart (Issue #40)
+## Canonical and Derived Artifact Roles
+
+M7 keeps ingestion outputs and research outputs deliberately separate:
+
+* The curated dividend snapshot under `data/curated/corporate_actions/dividends/` remains the canonical ingestion output.
+* The dividend research mart under `data/research/corporate_actions/dividends/` is a derived query layout.
+* Dividend event-window outputs under `data/research/corporate_actions/dividend_event_windows/` are derived research artifacts.
+* Validation and inspection summaries are advisory and read-only.
+* CI-safe examples write only under their configured local output roots.
+
+Derived research artifacts are designed for notebooks, local scripts, and
+pipelines. They must not replace or mutate canonical dividend snapshots or bar
+inputs.
+
+## Dividend Research Mart (M7)
 
 The deterministic snapshot under `data/curated/corporate_actions/dividends/` remains the release-safe ingestion output.
 
@@ -206,7 +219,7 @@ The research mart is generated from canonical normalized dividend fields and doe
 
 If partition columns are encoded in Hive directory paths, read from the dataset root so engines reconstruct partition columns during dataset scan.
 
-The research mart still does not implement adjusted prices, total-return reconstruction, dividend reinvestment, or dividend-to-bars join logic. Issue #41 remains the place for dividend-to-bars event-window joins.
+The research mart still does not implement adjusted prices, total-return reconstruction, dividend reinvestment, or backtest cash-flow behavior. Dividend-to-bars joins are separate derived research views.
 
 Build the research mart from an existing curated dividend snapshot with:
 
@@ -225,7 +238,8 @@ fintech-build-dividend-research-mart \
 ```
 
 The command prints a deterministic JSON summary to stdout. Add `--summary-output
-path/to/summary.json` to write the same JSON summary to a file.
+path/to/summary.json` to write the same JSON summary to a file. Parent
+directories are created when writing the summary file.
 
 Validate and inspect the derived research mart without mutating it:
 
@@ -245,11 +259,13 @@ Validation prints deterministic JSON with metadata, schema, row-count,
 symbol/year coverage, partition, and event-anchor checks. It is read-only; the
 research mart remains a derived research surface and is not canonical data. The
 CLI returns exit code `0` when validation executes successfully; validation
-status is reported in the JSON `valid` field.
+status is reported in the JSON `valid` field. `--summary-output` writes the
+same deterministic JSON to disk.
 
-## Dividend-to-Bars Event Windows (Issue #41)
+## Dividend-to-Bars Event Windows (M7)
 
-Issue #41 adds deterministic research helpers for joining dividend events to bar data without mutating canonical dividend or bar datasets.
+M7 includes deterministic research helpers and CLI wrappers for joining dividend
+events to bar data without mutating canonical dividend or bar datasets.
 
 Primary helper:
 
@@ -309,13 +325,28 @@ fintech-join-dividend-event-windows \
 The command is local and credential-free. It accepts CSV or Parquet bar inputs,
 can read dividends from the curated snapshot or derived research mart, and can
 optionally write CSV or Parquet joined rows as derived research output. It does
-not mutate canonical dividend snapshots, research marts, or bar inputs.
+not mutate canonical dividend snapshots, research marts, or bar inputs. Direct
+output format is inferred from `.parquet`, `.pq`, or `.csv`, or can be supplied
+with `--output-format`. Add `--summary-output path/to/summary.json` to write the
+same deterministic JSON summary printed to stdout.
 
 Issue #50 adds a derived event-window output contract for runs that should carry
 metadata alongside joined rows:
 
 ```bash
 python -m src.cli.join_dividend_event_windows \
+  --dividend-source research-mart \
+  --research-root data/research/corporate_actions/dividends \
+  --bars-path data/local/synthetic_bars.parquet \
+  --pre-window-days 2 \
+  --post-window-days 2 \
+  --output-root data/research/corporate_actions/dividend_event_windows/example_run
+```
+
+The installed console-script equivalent is:
+
+```bash
+fintech-join-dividend-event-windows \
   --dividend-source research-mart \
   --research-root data/research/corporate_actions/dividends \
   --bars-path data/local/synthetic_bars.parquet \
@@ -336,18 +367,83 @@ Metadata links the derived output to the dividend input path, bar input path,
 event-window configuration, row counts, and schema. These outputs remain derived
 research artifacts and are not canonical data.
 
+Event-window metadata includes:
+
+```text
+dataset
+dataset_role = derived_research_event_window
+source_dividend_path
+source_bar_path
+event_anchor
+pre_window_days
+post_window_days
+bar_timeframe
+symbol_filter
+event_count
+bar_count
+joined_row_count
+row_count
+schema_fields
+data_file
+metadata_file
+format
+created_by
+```
+
 The writer rejects output roots that overlap curated dividend snapshots, derived
 dividend research marts, source dividend inputs, source bar inputs, or paths
 containing `canonical`.
 
+Safety boundaries enforced by the CLI and writer:
+
+* Output roots cannot overlap curated dividend snapshots.
+* Output roots cannot overlap derived dividend research marts.
+* Output roots cannot overlap source dividend inputs.
+* Output roots cannot overlap source bar inputs.
+* Paths containing `canonical` are rejected.
+* Examples do not call Alpaca and do not require credentials.
+* No scheduler dependencies are introduced.
+
 Python API entry points:
 
 ```python
+from src.ingestion.corporate_actions_research_mart import (
+    inspect_dividend_research_mart,
+    validate_dividend_research_mart,
+    write_dividend_research_mart_from_snapshot,
+)
 from src.ingestion.dividend_event_window import (
     join_dividend_events_to_bars_result,
     read_dividend_event_window_output,
     write_dividend_event_window_output,
 )
+```
+
+Example Python composition:
+
+```python
+mart_result = write_dividend_research_mart_from_snapshot(
+    snapshot_root="data/curated/corporate_actions/dividends",
+    research_root="data/research/corporate_actions/dividends",
+)
+inspection = inspect_dividend_research_mart(mart_result.root_dir)
+validation = validate_dividend_research_mart(mart_result.root_dir)
+
+join_result = join_dividend_events_to_bars_result(
+    dividends,
+    bars,
+    pre_window_days=2,
+    post_window_days=2,
+)
+output_result = write_dividend_event_window_output(
+    join_result,
+    output_root="data/research/corporate_actions/dividend_event_windows/example_run",
+    source_dividend_path=mart_result.root_dir,
+    source_bar_path="data/local/synthetic_bars.parquet",
+    pre_window_days=2,
+    post_window_days=2,
+)
+loaded_event_windows = read_dividend_event_window_output(output_result.root_dir)
 ```
 
 For a notebook-style quickstart that uses only synthetic local data:
@@ -360,7 +456,9 @@ python examples/dividend_research_mart_quickstart.py \
 The quickstart is a plain Python script organized into notebook-style sections.
 It demonstrates snapshot -> research mart -> validation -> event-window join ->
 derived output metadata without calling Alpaca or mutating canonical repository
-data.
+data. It writes a synthetic curated snapshot, derived research mart, synthetic
+bars, contract-style event-window output, and `summary.json` under the configured
+output root.
 
 For a scheduler-free pipeline-style workflow using small stage functions:
 
@@ -371,7 +469,10 @@ python examples/dividend_research_pipeline_workflow.py \
 
 The pipeline example uses synthetic local data only, writes only under the
 configured output root, and demonstrates snapshot -> research mart -> validation
--> event-window join -> derived output metadata -> workflow summary.
+-> event-window join -> derived output metadata -> workflow summary. It differs
+from the quickstart by organizing the same public APIs into small stage
+functions with a `workflow_summary.json`, without adding Airflow, Prefect,
+Dagster, or any scheduler dependency.
 
 As with the rest of dividend research support, these joins are derived research views only. They do not implement adjusted prices, total-return reconstruction, dividend reinvestment, or backtest cash-flow logic.
 
