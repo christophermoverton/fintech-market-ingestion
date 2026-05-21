@@ -151,6 +151,8 @@ For the full schema, metadata contract, CLI arguments, and a CI-safe sample-data
 
 Dividend records are event evidence. See `docs/corporate_actions_dividends.md` for point-in-time research semantics and adjusted-return boundaries.
 
+Derived dividend-to-bars event-window joins are available for research workflows via `src.ingestion.dividend_event_window`.
+
 ---
 
 ## Packaging and Developer Setup
