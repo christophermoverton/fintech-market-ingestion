@@ -141,6 +141,8 @@ data/curated/corporate_actions/dividends/metadata.json
 
 For the full schema, metadata contract, CLI arguments, and a CI-safe sample-data example, see `docs/corporate_actions_dividends.md`.
 
+Dividend records are event evidence. See `docs/corporate_actions_dividends.md` for point-in-time research semantics and adjusted-return boundaries.
+
 ---
 
 ## Packaging and Developer Setup

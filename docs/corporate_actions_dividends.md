@@ -40,6 +40,67 @@ Dividend records are normalized and persisted separately under:
 data/curated/corporate_actions/dividends/
 ```
 
+## Point-in-Time Research Semantics
+
+Dividend records are event evidence. They are useful for research joins and event studies, but they are not adjusted prices, total-return series, or dividend-reinvestment outputs.
+
+Default event-study anchor:
+
+```text
+ex_date
+```
+
+Use `ex_date` as the default anchor when studying market reaction around dividend entitlement because it is the common event-study boundary for price and bar behavior. Use another field only when the research question explicitly requires that anchor and the field was known at the decision timestamp.
+
+### Dividend Date Fields
+
+| Field | Purpose | Research caution |
+| --- | --- | --- |
+| `declaration_date` | company announcement date | usable only once known |
+| `ex_date` | entitlement and common event-study anchor | default anchor for price and bar event studies |
+| `record_date` | shareholder eligibility record date | not usually the trading anchor |
+| `payable_date` | cash-flow payment timing | not usually a price-event anchor |
+| `process_date` | ingestion and source as-of provenance | not the corporate event date |
+
+### Point-in-Time Usage Guidance
+
+Point-in-time research should only use fields that were known as of the research timestamp. That means:
+
+* `declaration_date` can support announcement-reaction studies only after the announcement is observable.
+* `ex_date` is the default anchor for event-window joins against bars or trades.
+* `record_date` is mainly entitlement and accounting context, not a price-event anchor.
+* `payable_date` is payment timing, not a market-entry signal.
+* `process_date` is useful for source provenance and ingestion as-of checks, but it should not be treated as the corporate event date.
+
+Lookahead boundaries to avoid:
+
+* Do not use `payable_date` as a signal before it is known.
+* Do not treat future-corrected dividend rows as if they were available historically.
+* Do not build labels or signals from dividend fields that would not have been visible at the decision timestamp.
+
+### Adjusted-Return Boundaries
+
+Current repository state does not implement:
+
+```text
+adjusted prices
+total-return series
+dividend reinvestment
+automatic backtest cash-flow treatment
+```
+
+Dividend records remain canonical event evidence. Any future adjusted-return dataset should be defined as a separate derived artifact with explicit inputs, point-in-time/as-of policy, and no mutation of canonical dividend artifacts or bar data.
+
+### Future Work Boundary
+
+The next likely steps are:
+
+* Issue #40: partitioned dividend research mart
+* Issue #41: dividend-to-bars event-window joins
+* A future adjusted-return issue with a separate derived dataset, explicit input artifacts, deterministic metadata, and no mutation of raw bars or canonical dividend artifacts
+
+If you need these semantics programmatically, see `src.ingestion.dividend_research_semantics` for the current constants.
+
 ## Live CLI Usage
 
 Live ingestion requires Alpaca credentials in the environment or `.env` file:
