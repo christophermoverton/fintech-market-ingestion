@@ -36,6 +36,70 @@ class DividendResearchMartResult:
     metadata: dict[str, Any]
 
 
+@dataclass(frozen=True)
+class DividendResearchMartInspection:
+    research_root: str
+    metadata_path: str
+    exists: bool
+    valid: bool
+    row_count: int
+    symbol_count: int
+    year_count: int
+    symbols: list[str]
+    years: list[int]
+    partition_columns: list[str]
+    event_anchor: Optional[str]
+    event_anchor_source: Optional[str]
+    dataset: Optional[str]
+    dataset_role: Optional[str]
+    source_dataset_role: Optional[str]
+    schema_fields: list[str]
+    missing_required_fields: list[str]
+    validation_errors: list[str]
+    validation_warning_count: int
+    validation_error_count: int
+
+    def as_dict(self) -> dict[str, Any]:
+        return {
+            "research_root": self.research_root,
+            "metadata_path": self.metadata_path,
+            "exists": self.exists,
+            "valid": self.valid,
+            "row_count": self.row_count,
+            "symbol_count": self.symbol_count,
+            "year_count": self.year_count,
+            "symbols": self.symbols,
+            "years": self.years,
+            "partition_columns": self.partition_columns,
+            "event_anchor": self.event_anchor,
+            "event_anchor_source": self.event_anchor_source,
+            "dataset": self.dataset,
+            "dataset_role": self.dataset_role,
+            "source_dataset_role": self.source_dataset_role,
+            "schema_fields": self.schema_fields,
+            "missing_required_fields": self.missing_required_fields,
+            "validation_errors": self.validation_errors,
+            "validation_warning_count": self.validation_warning_count,
+            "validation_error_count": self.validation_error_count,
+        }
+
+
+@dataclass(frozen=True)
+class DividendResearchMartValidationResult:
+    valid: bool
+    errors: list[str]
+    warnings: list[str]
+    inspection: DividendResearchMartInspection
+
+    def as_dict(self) -> dict[str, Any]:
+        return {
+            "valid": self.valid,
+            "errors": self.errors,
+            "warnings": self.warnings,
+            "inspection": self.inspection.as_dict(),
+        }
+
+
 def write_dividend_research_mart(
     records_or_frame: Sequence[NormalizedDividendRecord | Mapping[str, Any]] | pd.DataFrame,
     root_dir: Path | str = DEFAULT_DIVIDEND_RESEARCH_MART_ROOT,
@@ -140,6 +204,18 @@ def read_dividend_research_mart(
         na_position="last",
     )
     return ordered.reset_index(drop=True)[DIVIDEND_RECORD_COLUMNS + ["year"]]
+
+
+def inspect_dividend_research_mart(
+    root_dir: Path | str = DEFAULT_DIVIDEND_RESEARCH_MART_ROOT,
+) -> DividendResearchMartInspection:
+    return _inspect_dividend_research_mart(root_dir).inspection
+
+
+def validate_dividend_research_mart(
+    root_dir: Path | str = DEFAULT_DIVIDEND_RESEARCH_MART_ROOT,
+) -> DividendResearchMartValidationResult:
+    return _inspect_dividend_research_mart(root_dir)
 
 
 def _coerce_input_to_dataframe(
@@ -269,6 +345,191 @@ def _parse_iso_date(value: Any) -> Optional[date]:
         return date.fromisoformat(normalized)
     except ValueError:
         return None
+
+
+def _inspect_dividend_research_mart(
+    root_dir: Path | str,
+) -> DividendResearchMartValidationResult:
+    root = Path(root_dir)
+    metadata_path = root / DIVIDEND_RESEARCH_MART_METADATA_FILENAME
+    errors: list[str] = []
+    warnings: list[str] = []
+    metadata: dict[str, Any] = {}
+    loaded: Optional[pd.DataFrame] = None
+
+    if not root.exists():
+        errors.append(f"Dividend research mart root does not exist: {root}")
+
+    if not metadata_path.exists():
+        errors.append(f"Dividend research mart metadata does not exist: {metadata_path}")
+    else:
+        try:
+            decoded_metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError as exc:
+            errors.append(f"Dividend research mart metadata is not valid JSON: {exc.msg}")
+        else:
+            if not isinstance(decoded_metadata, dict):
+                errors.append("Dividend research mart metadata must be a JSON object")
+            else:
+                metadata = decoded_metadata
+
+    if metadata:
+        _validate_metadata_contract(metadata, errors)
+
+    try:
+        loaded = read_dividend_research_mart(root)
+    except (FileNotFoundError, ValueError, KeyError) as exc:
+        errors.append(f"Dividend research mart could not be read: {exc}")
+
+    row_count = 0
+    symbols: list[str] = []
+    years: list[int] = []
+    if loaded is not None:
+        row_count = len(loaded)
+        symbols = sorted(str(value) for value in loaded["symbol"].dropna().unique().tolist())
+        years = sorted(int(value) for value in loaded["year"].dropna().unique().tolist())
+        _validate_loaded_contract(loaded, symbols, years, errors)
+
+    if metadata and loaded is not None:
+        _validate_metadata_against_loaded_data(metadata, row_count, symbols, years, errors)
+
+    missing_required_fields = _missing_required_schema_fields(metadata)
+    if missing_required_fields:
+        errors.append(
+            "Dividend research mart metadata schema_fields is missing required field(s): "
+            f"{missing_required_fields}"
+        )
+
+    valid = not errors
+    inspection = DividendResearchMartInspection(
+        research_root=str(root),
+        metadata_path=str(metadata_path),
+        exists=root.exists(),
+        valid=valid,
+        row_count=row_count,
+        symbol_count=len(symbols),
+        year_count=len(years),
+        symbols=symbols,
+        years=years,
+        partition_columns=list(metadata.get("partition_columns", [])),
+        event_anchor=metadata.get("event_anchor"),
+        event_anchor_source=metadata.get("event_anchor_source"),
+        dataset=metadata.get("dataset"),
+        dataset_role=metadata.get("dataset_role"),
+        source_dataset_role=metadata.get("source_dataset_role"),
+        schema_fields=list(metadata.get("schema_fields", [])),
+        missing_required_fields=missing_required_fields,
+        validation_errors=errors,
+        validation_warning_count=len(warnings),
+        validation_error_count=len(errors),
+    )
+    return DividendResearchMartValidationResult(
+        valid=valid,
+        errors=errors,
+        warnings=warnings,
+        inspection=inspection,
+    )
+
+
+def _validate_metadata_contract(metadata: Mapping[str, Any], errors: list[str]) -> None:
+    if metadata.get("dataset_role") != "research_mart":
+        errors.append("Dividend research mart metadata dataset_role must be research_mart")
+    if metadata.get("source_dataset_role") != "deterministic_snapshot":
+        errors.append(
+            "Dividend research mart metadata source_dataset_role must be deterministic_snapshot"
+        )
+    if metadata.get("partition_columns") != DIVIDEND_RESEARCH_MART_PARTITION_COLUMNS:
+        errors.append(
+            "Dividend research mart metadata partition_columns must be "
+            f"{DIVIDEND_RESEARCH_MART_PARTITION_COLUMNS}"
+        )
+    if metadata.get("event_anchor") != DEFAULT_DIVIDEND_EVENT_ANCHOR:
+        errors.append(
+            f"Dividend research mart metadata event_anchor must be {DEFAULT_DIVIDEND_EVENT_ANCHOR}"
+        )
+    event_anchor_source = metadata.get("event_anchor_source")
+    if event_anchor_source is not None and event_anchor_source != "normalized.ex_date":
+        errors.append(
+            "Dividend research mart metadata event_anchor_source must be normalized.ex_date"
+        )
+
+
+def _validate_loaded_contract(
+    loaded: pd.DataFrame,
+    symbols: Sequence[str],
+    years: Sequence[int],
+    errors: list[str],
+) -> None:
+    missing_columns = [field for field in _required_research_mart_fields() if field not in loaded]
+    if missing_columns:
+        errors.append(
+            f"Dividend research mart data is missing required field(s): {missing_columns}"
+        )
+        return
+
+    expected_years = sorted(
+        {
+            parsed.year
+            for parsed in (_parse_iso_date(value) for value in loaded["ex_date"].tolist())
+            if parsed is not None
+        }
+    )
+    if list(years) != expected_years:
+        errors.append(
+            "Dividend research mart partition years do not align with ex_date-derived years: "
+            f"expected {expected_years}, found {list(years)}"
+        )
+
+    normalized_symbols = sorted(
+        {
+            normalized
+            for normalized in (
+                _normalize_partition_symbol(value) for value in loaded["symbol"].tolist()
+            )
+            if normalized is not None
+        }
+    )
+    if list(symbols) != normalized_symbols:
+        errors.append(
+            "Dividend research mart partition symbols do not align with normalized symbols: "
+            f"expected {normalized_symbols}, found {list(symbols)}"
+        )
+
+
+def _validate_metadata_against_loaded_data(
+    metadata: Mapping[str, Any],
+    row_count: int,
+    symbols: Sequence[str],
+    years: Sequence[int],
+    errors: list[str],
+) -> None:
+    for field in ["row_count", "written_record_count", "input_record_count"]:
+        if field in metadata and metadata[field] != row_count:
+            errors.append(
+                f"Dividend research mart metadata {field}={metadata[field]} does not match "
+                f"loaded row_count={row_count}"
+            )
+    if metadata.get("symbol_count") != len(symbols):
+        errors.append(
+            "Dividend research mart metadata symbol_count does not match loaded symbol count"
+        )
+    if metadata.get("year_count") != len(years):
+        errors.append("Dividend research mart metadata year_count does not match loaded year count")
+    if metadata.get("symbols") != list(symbols):
+        errors.append("Dividend research mart metadata symbols do not match loaded symbols")
+    if metadata.get("years") != list(years):
+        errors.append("Dividend research mart metadata years do not match loaded years")
+
+
+def _missing_required_schema_fields(metadata: Mapping[str, Any]) -> list[str]:
+    schema_fields = metadata.get("schema_fields", [])
+    if not isinstance(schema_fields, list):
+        return _required_research_mart_fields()
+    return [field for field in _required_research_mart_fields() if field not in schema_fields]
+
+
+def _required_research_mart_fields() -> list[str]:
+    return DIVIDEND_RECORD_COLUMNS + ["year"]
 
 
 def _relative_path_if_possible(path: Optional[Path | str]) -> Optional[str]:

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "fintech-market-ingestion"
-version = "0.6.0"
+version = "0.7.0"
 description = "Market data ingestion and validation framework for Alpaca OHLCV bars and corporate-action dividend evidence."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -46,11 +46,15 @@ dependencies = [
 dev = [
   "build>=1.2",
   "pytest>=8.0",
-  "ruff>=0.8"
+  "ruff>=0.8",
+  "tomli>=2.0; python_version < '3.11'"
 ]
 
 [project.scripts]
+fintech-build-dividend-research-mart = "src.cli.build_dividend_research_mart:main"
 fintech-ingest-corporate-actions = "src.cli.ingest_corporate_actions:main"
+fintech-join-dividend-event-windows = "src.cli.join_dividend_event_windows:main"
+fintech-validate-dividend-research-mart = "src.cli.validate_dividend_research_mart:main"
 
 [project.urls]
 Homepage = "https://github.com/christophermoverton/fintech-market-ingestion"

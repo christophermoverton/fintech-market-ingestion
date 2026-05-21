@@ -2,7 +2,7 @@
 
 A production-style market data ingestion and validation framework for historical OHLCV bars (Daily + 1-Minute) using Alpaca market data. The pipeline writes curated, partitioned Parquet datasets and provides a structured QA layer with artifact-based observability and optional strict enforcement suitable for CI gating and trading research workflows.
 
-For cross-platform contributor setup and validation, see [docs/cross_platform_contributor_validation.md](docs/cross_platform_contributor_validation.md). For setup, packaging, linting, build validation, and future publishing boundaries, see [docs/packaging_pypi_readiness.md](docs/packaging_pypi_readiness.md). For the focused M5 release checklist, see [docs/m5_release_readiness.md](docs/m5_release_readiness.md). For the focused M4 validation checklist, see [docs/m4_release_readiness.md](docs/m4_release_readiness.md).
+For cross-platform contributor setup and validation, see [docs/cross_platform_contributor_validation.md](docs/cross_platform_contributor_validation.md). For setup, packaging, linting, build validation, and future publishing boundaries, see [docs/packaging_pypi_readiness.md](docs/packaging_pypi_readiness.md). For the focused M7 release checklist, see [docs/m7_release_readiness.md](docs/m7_release_readiness.md). For the focused M5 release checklist, see [docs/m5_release_readiness.md](docs/m5_release_readiness.md). For the focused M4 validation checklist, see [docs/m4_release_readiness.md](docs/m4_release_readiness.md).
 
 ---
 
@@ -145,6 +145,106 @@ Derived research mart output is also available for symbol and year analysis:
 data/research/corporate_actions/dividends/
 ```
 
+Build the derived mart from an existing curated dividend snapshot with:
+
+```bash
+python -m src.cli.build_dividend_research_mart \
+  --snapshot-root data/curated/corporate_actions/dividends \
+  --research-root data/research/corporate_actions/dividends
+```
+
+Installed console script:
+
+```bash
+fintech-build-dividend-research-mart \
+  --snapshot-root data/curated/corporate_actions/dividends \
+  --research-root data/research/corporate_actions/dividends
+```
+
+Validate and inspect the derived mart without mutating it:
+
+```bash
+python -m src.cli.validate_dividend_research_mart \
+  --research-root data/research/corporate_actions/dividends
+```
+
+Installed console script:
+
+```bash
+fintech-validate-dividend-research-mart \
+  --research-root data/research/corporate_actions/dividends
+```
+
+The validation command is read-only and reports validation status in its JSON
+`valid` field.
+
+Join local dividend events to local bar data as a derived research output:
+
+```bash
+python -m src.cli.join_dividend_event_windows \
+  --dividend-source research-mart \
+  --research-root data/research/corporate_actions/dividends \
+  --bars-path data/local/synthetic_bars.parquet \
+  --pre-window-days 2 \
+  --post-window-days 2 \
+  --output-path data/research/corporate_actions/dividend_event_windows/event_windows.parquet
+```
+
+Installed console script:
+
+```bash
+fintech-join-dividend-event-windows \
+  --dividend-source research-mart \
+  --research-root data/research/corporate_actions/dividends \
+  --bars-path data/local/synthetic_bars.parquet \
+  --pre-window-days 2 \
+  --post-window-days 2 \
+  --output-path data/research/corporate_actions/dividend_event_windows/event_windows.parquet
+```
+
+The join command is local, credential-free, and does not mutate canonical
+dividend snapshots, research marts, or bar inputs.
+
+For a contract-style derived output with metadata:
+
+```bash
+python -m src.cli.join_dividend_event_windows \
+  --dividend-source research-mart \
+  --research-root data/research/corporate_actions/dividends \
+  --bars-path data/local/synthetic_bars.parquet \
+  --pre-window-days 2 \
+  --post-window-days 2 \
+  --output-root data/research/corporate_actions/dividend_event_windows/example_run
+```
+
+That writes `event_windows.parquet` and `metadata.json` under the output root.
+The metadata records dividend input path, bar input path, event-window config,
+row counts, and schema. Event-window outputs are derived research artifacts, not
+canonical data.
+
+Notebook-style quickstart with synthetic data only:
+
+```bash
+python examples/dividend_research_mart_quickstart.py \
+  --output-root artifacts/examples/dividend_research_mart_quickstart
+```
+
+The quickstart is plain Python and safe for CI. It demonstrates snapshot ->
+research mart -> validation -> event-window join -> derived output metadata
+without calling Alpaca or mutating canonical repository data.
+
+Pipeline-style synthetic workflow:
+
+```bash
+python examples/dividend_research_pipeline_workflow.py \
+  --output-root artifacts/examples/dividend_research_pipeline_workflow
+```
+
+The workflow example is scheduler-free and uses small stage functions. It writes
+only under the configured output root and demonstrates snapshot -> research mart
+-> validation -> event-window join -> derived output metadata -> workflow
+summary.
+
 The deterministic curated snapshot remains the canonical ingestion output.
 
 For the full schema, metadata contract, CLI arguments, and a CI-safe sample-data example, see `docs/corporate_actions_dividends.md`.
@@ -152,6 +252,82 @@ For the full schema, metadata contract, CLI arguments, and a CI-safe sample-data
 Dividend records are event evidence. See `docs/corporate_actions_dividends.md` for point-in-time research semantics and adjusted-return boundaries.
 
 Derived dividend-to-bars event-window joins are available for research workflows via `src.ingestion.dividend_event_window`.
+
+### M7 Dividend Research Workflow Quickstart
+
+M7 makes the dividend research workflow easy to build, inspect, validate, and
+compose from CLI commands, Python APIs, notebook-style scripts, and
+pipeline-style scripts. The boundary is explicit: the curated dividend snapshot
+under `data/curated/corporate_actions/dividends/` remains the canonical
+ingestion artifact; research marts and event-window outputs under
+`data/research/` are derived research artifacts.
+
+Build the derived dividend research mart:
+
+```bash
+fintech-build-dividend-research-mart \
+  --snapshot-root data/curated/corporate_actions/dividends \
+  --research-root data/research/corporate_actions/dividends \
+  --summary-output artifacts/examples/dividend_research_mart_summary.json
+```
+
+Validate and inspect the mart without mutating it:
+
+```bash
+fintech-validate-dividend-research-mart \
+  --research-root data/research/corporate_actions/dividends \
+  --summary-output artifacts/examples/dividend_research_mart_validation.json
+```
+
+Join dividend events to local bar data and write direct CSV or Parquet output:
+
+```bash
+fintech-join-dividend-event-windows \
+  --dividend-source research-mart \
+  --research-root data/research/corporate_actions/dividends \
+  --bars-path data/local/synthetic_bars.parquet \
+  --pre-window-days 2 \
+  --post-window-days 2 \
+  --output-path data/research/corporate_actions/dividend_event_windows/event_windows.parquet
+```
+
+Write contract-style derived event-window output with metadata:
+
+```bash
+fintech-join-dividend-event-windows \
+  --dividend-source research-mart \
+  --research-root data/research/corporate_actions/dividends \
+  --bars-path data/local/synthetic_bars.parquet \
+  --pre-window-days 2 \
+  --post-window-days 2 \
+  --output-root data/research/corporate_actions/dividend_event_windows/example_run
+```
+
+Module invocations are also supported for the three CLIs:
+
+```bash
+python -m src.cli.build_dividend_research_mart --help
+python -m src.cli.validate_dividend_research_mart --help
+python -m src.cli.join_dividend_event_windows --help
+```
+
+Run the CI-safe synthetic examples:
+
+```bash
+python examples/dividend_research_mart_quickstart.py \
+  --output-root artifacts/examples/dividend_research_mart_quickstart
+
+python examples/dividend_research_pipeline_workflow.py \
+  --output-root artifacts/examples/dividend_research_pipeline_workflow
+```
+
+The examples use fixed local synthetic data, require no Alpaca credentials, do
+not call Alpaca, and write only under the configured output root. M7 does not
+implement adjusted prices, total-return reconstruction, dividend reinvestment,
+or backtest cash-flow behavior. See
+[docs/corporate_actions_dividends.md](docs/corporate_actions_dividends.md) for
+the detailed metadata contract, safety boundaries, API examples, and output
+layouts.
 
 ---
 
@@ -191,7 +367,7 @@ python -m build
 python scripts/smoke_test_wheel.py
 ```
 
-For a full cross-platform contributor workflow, see [docs/cross_platform_contributor_validation.md](docs/cross_platform_contributor_validation.md). For a packaging and PyPI-readiness walkthrough, including validation commands, build inspection, and cleanup, see [docs/packaging_pypi_readiness.md](docs/packaging_pypi_readiness.md). The M5 release-readiness checklist lives in [docs/m5_release_readiness.md](docs/m5_release_readiness.md), and the M4 deterministic release-readiness checklist lives in [docs/m4_release_readiness.md](docs/m4_release_readiness.md).
+For a full cross-platform contributor workflow, see [docs/cross_platform_contributor_validation.md](docs/cross_platform_contributor_validation.md). For a packaging and PyPI-readiness walkthrough, including validation commands, build inspection, and cleanup, see [docs/packaging_pypi_readiness.md](docs/packaging_pypi_readiness.md). The M7 release-readiness checklist lives in [docs/m7_release_readiness.md](docs/m7_release_readiness.md), the M5 release-readiness checklist lives in [docs/m5_release_readiness.md](docs/m5_release_readiness.md), and the M4 deterministic release-readiness checklist lives in [docs/m4_release_readiness.md](docs/m4_release_readiness.md).
 
 If you need a frozen environment for reproduction, `requirements.txt` is available as an optional path, but it is not the preferred development workflow for contributors.
 
