@@ -5,6 +5,29 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.1] - Alpaca Dividend Rate Normalization Patch - 2026-05-21
+
+### Fixed
+
+- **PR #58: Alpaca cash dividend normalization hardening**
+  - Normalize Alpaca cash-dividend `rate` values into `cash_amount` when
+    `cash_amount` is missing in source payloads.
+  - Preserve deterministic normalized corporate-actions outputs while improving
+    compatibility with provider response variations.
+
+### Updated
+
+- Corporate actions dividend documentation in
+  `docs/corporate_actions_dividends.md` to reflect normalization behavior.
+- Test coverage updates in:
+  - `tests/test_corporate_actions_normalization.py`
+  - `tests/test_corporate_actions_research_mart.py`
+
+### Notes
+
+- Patch release only; no CLI surface changes, no storage layout changes, and no
+  new runtime dependencies.
+
 ## [0.7.0] - Research Mart Usability, CLI, and Workflow Integration - 2026-05-21
 
 ### Added
