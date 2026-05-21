@@ -208,6 +208,25 @@ If partition columns are encoded in Hive directory paths, read from the dataset 
 
 The research mart still does not implement adjusted prices, total-return reconstruction, dividend reinvestment, or dividend-to-bars join logic. Issue #41 remains the place for dividend-to-bars event-window joins.
 
+Build the research mart from an existing curated dividend snapshot with:
+
+```bash
+python -m src.cli.build_dividend_research_mart \
+  --snapshot-root data/curated/corporate_actions/dividends \
+  --research-root data/research/corporate_actions/dividends
+```
+
+After an editable or wheel install, the package also exposes:
+
+```bash
+fintech-build-dividend-research-mart \
+  --snapshot-root data/curated/corporate_actions/dividends \
+  --research-root data/research/corporate_actions/dividends
+```
+
+The command prints a deterministic JSON summary to stdout. Add `--summary-output
+path/to/summary.json` to write the same JSON summary to a file.
+
 ## Dividend-to-Bars Event Windows (Issue #41)
 
 Issue #41 adds deterministic research helpers for joining dividend events to bar data without mutating canonical dividend or bar datasets.

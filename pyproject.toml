@@ -50,6 +50,7 @@ dev = [
 ]
 
 [project.scripts]
+fintech-build-dividend-research-mart = "src.cli.build_dividend_research_mart:main"
 fintech-ingest-corporate-actions = "src.cli.ingest_corporate_actions:main"
 
 [project.urls]

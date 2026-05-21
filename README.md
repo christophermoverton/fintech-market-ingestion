@@ -145,6 +145,22 @@ Derived research mart output is also available for symbol and year analysis:
 data/research/corporate_actions/dividends/
 ```
 
+Build the derived mart from an existing curated dividend snapshot with:
+
+```bash
+python -m src.cli.build_dividend_research_mart \
+  --snapshot-root data/curated/corporate_actions/dividends \
+  --research-root data/research/corporate_actions/dividends
+```
+
+Installed console script:
+
+```bash
+fintech-build-dividend-research-mart \
+  --snapshot-root data/curated/corporate_actions/dividends \
+  --research-root data/research/corporate_actions/dividends
+```
+
 The deterministic curated snapshot remains the canonical ingestion output.
 
 For the full schema, metadata contract, CLI arguments, and a CI-safe sample-data example, see `docs/corporate_actions_dividends.md`.
