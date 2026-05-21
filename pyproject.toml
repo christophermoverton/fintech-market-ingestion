@@ -53,6 +53,7 @@ dev = [
 [project.scripts]
 fintech-build-dividend-research-mart = "src.cli.build_dividend_research_mart:main"
 fintech-ingest-corporate-actions = "src.cli.ingest_corporate_actions:main"
+fintech-validate-dividend-research-mart = "src.cli.validate_dividend_research_mart:main"
 
 [project.urls]
 Homepage = "https://github.com/christophermoverton/fintech-market-ingestion"

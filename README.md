@@ -161,6 +161,23 @@ fintech-build-dividend-research-mart \
   --research-root data/research/corporate_actions/dividends
 ```
 
+Validate and inspect the derived mart without mutating it:
+
+```bash
+python -m src.cli.validate_dividend_research_mart \
+  --research-root data/research/corporate_actions/dividends
+```
+
+Installed console script:
+
+```bash
+fintech-validate-dividend-research-mart \
+  --research-root data/research/corporate_actions/dividends
+```
+
+The validation command is read-only and reports validation status in its JSON
+`valid` field.
+
 The deterministic curated snapshot remains the canonical ingestion output.
 
 For the full schema, metadata contract, CLI arguments, and a CI-safe sample-data example, see `docs/corporate_actions_dividends.md`.

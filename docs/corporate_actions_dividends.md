@@ -227,6 +227,26 @@ fintech-build-dividend-research-mart \
 The command prints a deterministic JSON summary to stdout. Add `--summary-output
 path/to/summary.json` to write the same JSON summary to a file.
 
+Validate and inspect the derived research mart without mutating it:
+
+```bash
+python -m src.cli.validate_dividend_research_mart \
+  --research-root data/research/corporate_actions/dividends
+```
+
+After an editable or wheel install, the validation command is also available as:
+
+```bash
+fintech-validate-dividend-research-mart \
+  --research-root data/research/corporate_actions/dividends
+```
+
+Validation prints deterministic JSON with metadata, schema, row-count,
+symbol/year coverage, partition, and event-anchor checks. It is read-only; the
+research mart remains a derived research surface and is not canonical data. The
+CLI returns exit code `0` when validation executes successfully; validation
+status is reported in the JSON `valid` field.
+
 ## Dividend-to-Bars Event Windows (Issue #41)
 
 Issue #41 adds deterministic research helpers for joining dividend events to bar data without mutating canonical dividend or bar datasets.
