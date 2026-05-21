@@ -17,6 +17,7 @@ from src.ingestion.corporate_actions_storage import (
 )
 from src.ingestion.dividend_event_window import (
     join_dividend_events_to_bars_result,
+    write_dividend_event_window_output,
 )
 from src.ingestion.dividend_research_semantics import DEFAULT_DIVIDEND_EVENT_ANCHOR
 
@@ -42,15 +43,25 @@ def join_dividend_event_windows(
     bar_date_field: Optional[str] = None,
     bar_timeframe: str = "1D",
     output_path: Optional[Path | str] = None,
+    output_root: Optional[Path | str] = None,
     output_format: Optional[str] = None,
 ) -> dict[str, Any]:
     """Join local dividend events to local bars with event-window semantics."""
     _validate_dividend_source(dividend_source)
+    if output_path is not None and output_root is not None:
+        raise ValueError("--output-path and --output-root cannot be used together")
     if output_format is not None and output_path is None:
         raise ValueError("--output-format requires --output-path")
     if output_path is not None:
         validate_output_path(
             output_path=output_path,
+            bars_path=bars_path,
+            snapshot_root=snapshot_root,
+            research_root=research_root,
+        )
+    if output_root is not None:
+        validate_output_path(
+            output_path=output_root,
             bars_path=bars_path,
             snapshot_root=snapshot_root,
             research_root=research_root,
@@ -74,9 +85,27 @@ def join_dividend_event_windows(
     )
 
     resolved_output_format = None
+    output_result = None
     if output_path is not None:
         resolved_output_format = infer_output_format(output_path, output_format)
         write_joined_output(result.frame, output_path, output_format=resolved_output_format)
+    if output_root is not None:
+        output_result = write_dividend_event_window_output(
+            result,
+            output_root=output_root,
+            source_dividend_path=_source_dividend_path(
+                dividend_source=dividend_source,
+                snapshot_root=snapshot_root,
+                research_root=research_root,
+            ),
+            source_bar_path=bars_path,
+            event_anchor=event_date_field,
+            pre_window_days=pre_window_days,
+            post_window_days=post_window_days,
+            bar_timeframe=bar_timeframe,
+            symbol_filter=symbol,
+        )
+        resolved_output_format = "parquet"
 
     summary: dict[str, Any] = {
         "dividend_source": dividend_source,
@@ -84,7 +113,13 @@ def join_dividend_event_windows(
         "research_root": str(research_root) if dividend_source == "research-mart" else None,
         "bars_path": str(bars_path),
         "output_path": str(output_path) if output_path is not None else None,
+        "output_root": str(output_root) if output_root is not None else None,
         "output_format": resolved_output_format,
+        "metadata_path": str(output_result.metadata_path) if output_result is not None else None,
+        "data_path": str(output_result.data_path) if output_result is not None else None,
+        "dataset_role": output_result.metadata["dataset_role"]
+        if output_result is not None
+        else None,
         "event_date_field": event_date_field,
         "pre_window_days": pre_window_days,
         "post_window_days": post_window_days,
@@ -189,6 +224,12 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--bar-timeframe", default="1D")
     parser.add_argument("--output-path", help="Optional derived output path for joined rows")
     parser.add_argument(
+        "--output-root",
+        help=(
+            "Optional derived event-window output root for event_windows.parquet and metadata.json"
+        ),
+    )
+    parser.add_argument(
         "--output-format",
         choices=sorted(SUPPORTED_DATA_FORMATS),
         help="Optional output format; inferred from suffix when omitted",
@@ -217,6 +258,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         bar_date_field=args.bar_date_field,
         bar_timeframe=args.bar_timeframe,
         output_path=args.output_path,
+        output_root=args.output_root,
         output_format=args.output_format,
     )
     summary_json = format_summary_json(summary)
@@ -242,6 +284,19 @@ def _load_dividends(
         return read_dividend_corporate_actions(snapshot_root)
     if dividend_source == "research-mart":
         return read_dividend_research_mart(research_root)
+    raise ValueError(f"Unsupported dividend_source: {dividend_source}")
+
+
+def _source_dividend_path(
+    *,
+    dividend_source: str,
+    snapshot_root: Path | str,
+    research_root: Path | str,
+) -> Path | str:
+    if dividend_source == "snapshot":
+        return snapshot_root
+    if dividend_source == "research-mart":
+        return research_root
     raise ValueError(f"Unsupported dividend_source: {dividend_source}")
 
 

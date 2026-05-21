@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import json
+import shutil
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional
 
 import pandas as pd
 
@@ -11,6 +13,16 @@ from src.ingestion.corporate_actions_storage import read_dividend_corporate_acti
 from src.ingestion.dividend_research_semantics import DEFAULT_DIVIDEND_EVENT_ANCHOR
 
 SUPPORTED_EVENT_DATE_FIELDS = frozenset({DEFAULT_DIVIDEND_EVENT_ANCHOR})
+DEFAULT_DIVIDEND_EVENT_WINDOW_OUTPUT_ROOT = Path(
+    "data/research/corporate_actions/dividend_event_windows"
+)
+DIVIDEND_EVENT_WINDOW_DATASET_FILENAME = "event_windows.parquet"
+DIVIDEND_EVENT_WINDOW_METADATA_FILENAME = "metadata.json"
+DIVIDEND_EVENT_WINDOW_DATASET_ROLE = "derived_research_event_window"
+UNSAFE_EVENT_WINDOW_OUTPUT_MESSAGE = (
+    "Dividend event-window output must be a derived research path and must not overlap "
+    "with curated/canonical input paths."
+)
 DIVIDEND_CORE_FIELDS = [
     "corporate_action_id",
     "symbol",
@@ -43,6 +55,15 @@ class DividendEventWindowResult:
     event_count: int
     bar_count: int
     joined_row_count: int
+
+
+@dataclass(frozen=True)
+class DividendEventWindowOutputResult:
+    root_dir: Path
+    data_path: Path
+    metadata_path: Path
+    row_count: int
+    metadata: dict[str, Any]
 
 
 def join_dividend_events_to_bars(
@@ -205,6 +226,94 @@ def join_dividend_research_mart_to_bars(
         bar_date_field=bar_date_field,
         bar_timeframe=bar_timeframe,
     )
+
+
+def write_dividend_event_window_output(
+    result: DividendEventWindowResult | pd.DataFrame,
+    output_root: Path | str = DEFAULT_DIVIDEND_EVENT_WINDOW_OUTPUT_ROOT,
+    *,
+    source_dividend_path: Optional[Path | str] = None,
+    source_bar_path: Optional[Path | str] = None,
+    event_anchor: str = DEFAULT_DIVIDEND_EVENT_ANCHOR,
+    pre_window_days: int = 5,
+    post_window_days: int = 5,
+    bar_timeframe: str = "1D",
+    symbol_filter: Optional[str] = None,
+    event_count: Optional[int] = None,
+    bar_count: Optional[int] = None,
+) -> DividendEventWindowOutputResult:
+    """Write derived dividend event-window rows with deterministic metadata."""
+    if event_anchor != DEFAULT_DIVIDEND_EVENT_ANCHOR:
+        raise ValueError(f"Unsupported event_anchor: {event_anchor}. Supported: ex_date")
+
+    frame, resolved_event_count, resolved_bar_count, joined_row_count = _coerce_output_result(
+        result=result,
+        event_count=event_count,
+        bar_count=bar_count,
+    )
+    root = Path(output_root)
+    _validate_event_window_output_root(
+        output_root=root,
+        source_dividend_path=source_dividend_path,
+        source_bar_path=source_bar_path,
+    )
+
+    if root.exists():
+        shutil.rmtree(root)
+    root.mkdir(parents=True, exist_ok=True)
+
+    ordered = _order_event_window_output_frame(frame)
+    data_path = root / DIVIDEND_EVENT_WINDOW_DATASET_FILENAME
+    metadata_path = root / DIVIDEND_EVENT_WINDOW_METADATA_FILENAME
+    ordered.to_parquet(data_path, index=False)
+
+    metadata = {
+        "dataset": "corporate_actions_dividend_event_windows",
+        "dataset_role": DIVIDEND_EVENT_WINDOW_DATASET_ROLE,
+        "path": _relative_path_if_possible(root),
+        "format": "parquet",
+        "data_file": DIVIDEND_EVENT_WINDOW_DATASET_FILENAME,
+        "metadata_file": DIVIDEND_EVENT_WINDOW_METADATA_FILENAME,
+        "source_dividend_path": _relative_path_if_possible(source_dividend_path),
+        "source_bar_path": _relative_path_if_possible(source_bar_path),
+        "event_anchor": event_anchor,
+        "pre_window_days": pre_window_days,
+        "post_window_days": post_window_days,
+        "bar_timeframe": bar_timeframe,
+        "symbol_filter": symbol_filter,
+        "event_count": resolved_event_count,
+        "bar_count": resolved_bar_count,
+        "joined_row_count": joined_row_count,
+        "row_count": len(ordered),
+        "schema_fields": ordered.columns.tolist(),
+        "created_by": "write_dividend_event_window_output",
+    }
+    metadata_path.write_text(
+        json.dumps(metadata, sort_keys=True, indent=2, separators=(",", ": ")) + "\n",
+        encoding="utf-8",
+    )
+
+    return DividendEventWindowOutputResult(
+        root_dir=root,
+        data_path=data_path,
+        metadata_path=metadata_path,
+        row_count=len(ordered),
+        metadata=metadata,
+    )
+
+
+def read_dividend_event_window_output(
+    output_root: Path | str = DEFAULT_DIVIDEND_EVENT_WINDOW_OUTPUT_ROOT,
+) -> pd.DataFrame:
+    root = Path(output_root)
+    if not root.exists():
+        raise FileNotFoundError(f"Dividend event-window output root does not exist: {root}")
+
+    data_path = root / DIVIDEND_EVENT_WINDOW_DATASET_FILENAME
+    if not data_path.exists():
+        raise FileNotFoundError(f"Dividend event-window data file does not exist: {data_path}")
+
+    return _order_event_window_output_frame(pd.read_parquet(data_path)).reset_index(drop=True)
 
 
 def _validate_config(event_date_field: str, pre_window_days: int, post_window_days: int) -> None:
@@ -386,3 +495,89 @@ def _empty_dividends_frame() -> pd.DataFrame:
         ]
     )
     return frame
+
+
+def _coerce_output_result(
+    *,
+    result: DividendEventWindowResult | pd.DataFrame,
+    event_count: Optional[int],
+    bar_count: Optional[int],
+) -> tuple[pd.DataFrame, Optional[int], Optional[int], int]:
+    if isinstance(result, DividendEventWindowResult):
+        return (
+            result.frame.copy(deep=True),
+            result.event_count,
+            result.bar_count,
+            result.joined_row_count,
+        )
+    if isinstance(result, pd.DataFrame):
+        return result.copy(deep=True), event_count, bar_count, len(result)
+    raise ValueError("result must be a DividendEventWindowResult or pandas DataFrame")
+
+
+def _order_event_window_output_frame(frame: pd.DataFrame) -> pd.DataFrame:
+    ordered = frame.copy(deep=True)
+    order_columns = [
+        column
+        for column in [
+            "event_symbol",
+            "event_date",
+            "event_corporate_action_id",
+            "bar_date",
+            "bar_ts",
+        ]
+        if column in ordered.columns
+    ]
+    if order_columns:
+        ordered = ordered.sort_values(by=order_columns, na_position="last")
+    return ordered.reset_index(drop=True)
+
+
+def _validate_event_window_output_root(
+    *,
+    output_root: Path | str,
+    source_dividend_path: Optional[Path | str],
+    source_bar_path: Optional[Path | str],
+) -> None:
+    resolved_output = _resolve_path(output_root)
+    parts = [part.lower() for part in resolved_output.parts]
+    if _contains_curated_data_path(parts) or "canonical" in parts:
+        raise ValueError(UNSAFE_EVENT_WINDOW_OUTPUT_MESSAGE)
+
+    for input_path in [source_dividend_path, source_bar_path]:
+        if input_path is not None and _paths_overlap(resolved_output, _resolve_path(input_path)):
+            raise ValueError(UNSAFE_EVENT_WINDOW_OUTPUT_MESSAGE)
+
+
+def _relative_path_if_possible(path: Optional[Path | str]) -> Optional[str]:
+    if path is None:
+        return None
+    candidate = Path(path)
+    if not candidate.is_absolute():
+        return str(candidate).replace("\\", "/")
+
+    cwd = Path.cwd()
+    try:
+        return str(candidate.relative_to(cwd)).replace("\\", "/")
+    except ValueError:
+        return str(candidate).replace("\\", "/")
+
+
+def _resolve_path(path: Path | str) -> Path:
+    return Path(path).expanduser().resolve(strict=False)
+
+
+def _paths_overlap(left: Path, right: Path) -> bool:
+    return left == right or _is_relative_to(left, right) or _is_relative_to(right, left)
+
+
+def _is_relative_to(path: Path, parent: Path) -> bool:
+    try:
+        path.relative_to(parent)
+    except ValueError:
+        return False
+    return True
+
+
+def _contains_curated_data_path(parts: list[str]) -> bool:
+    return any(left == "data" and right == "curated" for left, right in zip(parts, parts[1:]))

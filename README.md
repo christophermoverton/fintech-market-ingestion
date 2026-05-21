@@ -205,6 +205,23 @@ fintech-join-dividend-event-windows \
 The join command is local, credential-free, and does not mutate canonical
 dividend snapshots, research marts, or bar inputs.
 
+For a contract-style derived output with metadata:
+
+```bash
+python -m src.cli.join_dividend_event_windows \
+  --dividend-source research-mart \
+  --research-root data/research/corporate_actions/dividends \
+  --bars-path data/local/synthetic_bars.parquet \
+  --pre-window-days 2 \
+  --post-window-days 2 \
+  --output-root data/research/corporate_actions/dividend_event_windows/example_run
+```
+
+That writes `event_windows.parquet` and `metadata.json` under the output root.
+The metadata records dividend input path, bar input path, event-window config,
+row counts, and schema. Event-window outputs are derived research artifacts, not
+canonical data.
+
 The deterministic curated snapshot remains the canonical ingestion output.
 
 For the full schema, metadata contract, CLI arguments, and a CI-safe sample-data example, see `docs/corporate_actions_dividends.md`.

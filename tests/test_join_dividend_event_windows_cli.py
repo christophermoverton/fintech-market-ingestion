@@ -311,6 +311,47 @@ def test_summary_output_writes_same_deterministic_json(
     assert stdout.endswith("\n")
 
 
+def test_join_cli_writes_contract_output_with_metadata(
+    dividend_snapshot, research_mart, bars_parquet_path, tmp_path
+):
+    output_root = tmp_path / "data" / "research" / "event_windows" / "run-1"
+
+    summary = cli.join_dividend_event_windows(
+        dividend_source="research-mart",
+        snapshot_root=dividend_snapshot,
+        research_root=research_mart,
+        bars_path=bars_parquet_path,
+        pre_window_days=1,
+        post_window_days=1,
+        output_root=output_root,
+    )
+    metadata = pd.read_json(output_root / "metadata.json", typ="series").to_dict()
+    loaded = pd.read_parquet(output_root / "event_windows.parquet")
+
+    assert summary["output_root"] == str(output_root)
+    assert summary["output_path"] is None
+    assert summary["output_format"] == "parquet"
+    assert summary["metadata_path"] == str(output_root / "metadata.json")
+    assert summary["data_path"] == str(output_root / "event_windows.parquet")
+    assert summary["dataset_role"] == "derived_research_event_window"
+    assert metadata["source_dividend_path"].endswith("data/research/corporate_actions/dividends")
+    assert metadata["source_bar_path"].endswith("bars/daily_bars.parquet")
+    assert len(loaded) == summary["joined_row_count"]
+
+
+def test_join_cli_rejects_output_path_and_output_root_together(
+    dividend_snapshot, bars_parquet_path, tmp_path
+):
+    with pytest.raises(ValueError, match="--output-path and --output-root cannot be used together"):
+        cli.join_dividend_event_windows(
+            dividend_source="snapshot",
+            snapshot_root=dividend_snapshot,
+            bars_path=bars_parquet_path,
+            output_path=tmp_path / "data" / "research" / "joined.parquet",
+            output_root=tmp_path / "data" / "research" / "event_windows" / "run-1",
+        )
+
+
 def test_summary_output_parent_directories_are_created(
     dividend_snapshot, bars_parquet_path, tmp_path, capsys
 ):

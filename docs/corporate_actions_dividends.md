@@ -311,6 +311,41 @@ can read dividends from the curated snapshot or derived research mart, and can
 optionally write CSV or Parquet joined rows as derived research output. It does
 not mutate canonical dividend snapshots, research marts, or bar inputs.
 
+Issue #50 adds a derived event-window output contract for runs that should carry
+metadata alongside joined rows:
+
+```bash
+python -m src.cli.join_dividend_event_windows \
+  --dividend-source research-mart \
+  --research-root data/research/corporate_actions/dividends \
+  --bars-path data/local/synthetic_bars.parquet \
+  --pre-window-days 2 \
+  --post-window-days 2 \
+  --output-root data/research/corporate_actions/dividend_event_windows/example_run
+```
+
+The contract layout is:
+
+```text
+data/research/corporate_actions/dividend_event_windows/<run_or_workflow_id>/
+  event_windows.parquet
+  metadata.json
+```
+
+Metadata links the derived output to the dividend input path, bar input path,
+event-window configuration, row counts, and schema. These outputs remain derived
+research artifacts and are not canonical data.
+
+Python API entry points:
+
+```python
+from src.ingestion.dividend_event_window import (
+    join_dividend_events_to_bars_result,
+    read_dividend_event_window_output,
+    write_dividend_event_window_output,
+)
+```
+
 As with the rest of dividend research support, these joins are derived research views only. They do not implement adjusted prices, total-return reconstruction, dividend reinvestment, or backtest cash-flow logic.
 
 ## Normalized Schema
