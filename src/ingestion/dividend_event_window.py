@@ -268,6 +268,11 @@ def write_dividend_event_window_output(
         source_bar_path=source_bar_path,
     )
 
+    if root.exists() and not root.is_dir():
+        raise ValueError(
+            f"Dividend event-window output root must be a directory path, not an existing file: {root}"
+        )
+
     if root.exists():
         shutil.rmtree(root)
     root.mkdir(parents=True, exist_ok=True)

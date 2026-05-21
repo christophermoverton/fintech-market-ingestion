@@ -245,6 +245,22 @@ def test_event_window_output_writer_does_not_mutate_source_inputs(event_window_r
     pd.testing.assert_frame_equal(event_window_result.frame, frame_before)
 
 
+def test_event_window_output_writer_rejects_existing_file_output_root(
+    event_window_result, tmp_path
+):
+    existing_file = tmp_path / "not_a_directory.txt"
+    existing_file.write_text("some content", encoding="utf-8")
+
+    with pytest.raises(ValueError, match="output root.*directory path"):
+        write_dividend_event_window_output(
+            event_window_result,
+            output_root=existing_file,
+        )
+
+    assert existing_file.exists()
+    assert existing_file.read_text(encoding="utf-8") == "some content"
+
+
 def test_event_window_output_writer_requires_no_live_credentials(
     monkeypatch, event_window_result, tmp_path
 ):
