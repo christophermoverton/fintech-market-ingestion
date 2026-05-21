@@ -256,6 +256,33 @@ def test_output_writing_to_csv(dividend_snapshot, bars_parquet_path, tmp_path):
     assert len(loaded) == summary["joined_row_count"]
 
 
+def test_event_window_output_safety_allows_safe_research_output_path(
+    dividend_snapshot, research_mart, bars_parquet_path, tmp_path
+):
+    output_path = (
+        tmp_path
+        / "data"
+        / "research"
+        / "corporate_actions"
+        / "dividend_event_windows"
+        / "joined.parquet"
+    )
+
+    summary = cli.join_dividend_event_windows(
+        dividend_source="snapshot",
+        snapshot_root=dividend_snapshot,
+        research_root=research_mart,
+        bars_path=bars_parquet_path,
+        pre_window_days=1,
+        post_window_days=1,
+        output_path=output_path,
+    )
+
+    assert summary["output_path"] == str(output_path)
+    assert summary["joined_row_count"] == 4
+    assert output_path.exists()
+
+
 def test_summary_output_writes_same_deterministic_json(
     dividend_snapshot, bars_parquet_path, tmp_path, capsys
 ):
@@ -463,6 +490,32 @@ def test_unsafe_output_path_overlapping_research_root_is_rejected(research_mart,
         )
 
 
+def test_snapshot_source_rejects_output_overlapping_research_root(
+    dividend_snapshot, research_mart, bars_parquet_path
+):
+    with pytest.raises(ValueError, match="derived research path.*curated/canonical"):
+        cli.join_dividend_event_windows(
+            dividend_source="snapshot",
+            snapshot_root=dividend_snapshot,
+            research_root=research_mart,
+            bars_path=bars_parquet_path,
+            output_path=research_mart / "joined.parquet",
+        )
+
+
+def test_research_mart_source_rejects_output_overlapping_snapshot_root(
+    dividend_snapshot, research_mart, bars_parquet_path
+):
+    with pytest.raises(ValueError, match="derived research path.*curated/canonical"):
+        cli.join_dividend_event_windows(
+            dividend_source="research-mart",
+            snapshot_root=dividend_snapshot,
+            research_root=research_mart,
+            bars_path=bars_parquet_path,
+            output_path=dividend_snapshot / "joined.parquet",
+        )
+
+
 def test_unsafe_output_path_with_canonical_part_is_rejected(
     dividend_snapshot, bars_parquet_path, tmp_path
 ):
@@ -475,6 +528,26 @@ def test_unsafe_output_path_with_canonical_part_is_rejected(
         )
 
 
+def test_output_format_without_output_path_is_rejected(dividend_snapshot, bars_parquet_path):
+    with pytest.raises(ValueError, match="--output-format requires --output-path"):
+        cli.join_dividend_event_windows(
+            dividend_source="snapshot",
+            snapshot_root=dividend_snapshot,
+            bars_path=bars_parquet_path,
+            output_format="csv",
+        )
+
+
+def test_unsupported_bars_format_is_rejected(dividend_snapshot, bars_parquet_path):
+    with pytest.raises(ValueError, match="Unsupported bars format"):
+        cli.join_dividend_event_windows(
+            dividend_source="snapshot",
+            snapshot_root=dividend_snapshot,
+            bars_path=bars_parquet_path,
+            bars_format="json",
+        )
+
+
 def test_unsupported_output_format_is_rejected(dividend_snapshot, bars_parquet_path, tmp_path):
     with pytest.raises(ValueError, match="Could not infer output format"):
         cli.join_dividend_event_windows(
@@ -482,6 +555,19 @@ def test_unsupported_output_format_is_rejected(dividend_snapshot, bars_parquet_p
             snapshot_root=dividend_snapshot,
             bars_path=bars_parquet_path,
             output_path=tmp_path / "data" / "research" / "event_windows" / "joined.json",
+        )
+
+
+def test_explicit_unsupported_output_format_is_rejected(
+    dividend_snapshot, bars_parquet_path, tmp_path
+):
+    with pytest.raises(ValueError, match="Unsupported output format"):
+        cli.join_dividend_event_windows(
+            dividend_source="snapshot",
+            snapshot_root=dividend_snapshot,
+            bars_path=bars_parquet_path,
+            output_path=tmp_path / "data" / "research" / "event_windows" / "joined.parquet",
+            output_format="json",
         )
 
 

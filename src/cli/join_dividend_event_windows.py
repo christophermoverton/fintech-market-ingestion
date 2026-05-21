@@ -46,12 +46,14 @@ def join_dividend_event_windows(
 ) -> dict[str, Any]:
     """Join local dividend events to local bars with event-window semantics."""
     _validate_dividend_source(dividend_source)
+    if output_format is not None and output_path is None:
+        raise ValueError("--output-format requires --output-path")
     if output_path is not None:
         validate_output_path(
             output_path=output_path,
             bars_path=bars_path,
-            snapshot_root=snapshot_root if dividend_source == "snapshot" else None,
-            research_root=research_root if dividend_source == "research-mart" else None,
+            snapshot_root=snapshot_root,
+            research_root=research_root,
         )
 
     dividends = _load_dividends(
