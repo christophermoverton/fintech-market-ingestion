@@ -8,8 +8,14 @@ from typing import Any, Optional
 
 import pandas as pd
 
-from src.ingestion.corporate_actions_research_mart import read_dividend_research_mart
-from src.ingestion.corporate_actions_storage import read_dividend_corporate_actions
+from src.ingestion.corporate_actions_research_mart import (
+    DEFAULT_DIVIDEND_RESEARCH_MART_ROOT,
+    read_dividend_research_mart,
+)
+from src.ingestion.corporate_actions_storage import (
+    DEFAULT_DIVIDEND_CORPORATE_ACTIONS_ROOT,
+    read_dividend_corporate_actions,
+)
 from src.ingestion.dividend_research_semantics import DEFAULT_DIVIDEND_EVENT_ANCHOR
 
 SUPPORTED_EVENT_DATE_FIELDS = frozenset({DEFAULT_DIVIDEND_EVENT_ANCHOR})
@@ -21,7 +27,11 @@ DIVIDEND_EVENT_WINDOW_METADATA_FILENAME = "metadata.json"
 DIVIDEND_EVENT_WINDOW_DATASET_ROLE = "derived_research_event_window"
 UNSAFE_EVENT_WINDOW_OUTPUT_MESSAGE = (
     "Dividend event-window output must be a derived research path and must not overlap "
-    "with curated/canonical input paths."
+    "with curated/canonical input paths or dividend research mart paths."
+)
+KNOWN_UNSAFE_DIVIDEND_ARTIFACT_ROOTS = (
+    DEFAULT_DIVIDEND_CORPORATE_ACTIONS_ROOT,
+    DEFAULT_DIVIDEND_RESEARCH_MART_ROOT,
 )
 DIVIDEND_CORE_FIELDS = [
     "corporate_action_id",
@@ -543,6 +553,10 @@ def _validate_event_window_output_root(
     parts = [part.lower() for part in resolved_output.parts]
     if _contains_curated_data_path(parts) or "canonical" in parts:
         raise ValueError(UNSAFE_EVENT_WINDOW_OUTPUT_MESSAGE)
+
+    for known_root in KNOWN_UNSAFE_DIVIDEND_ARTIFACT_ROOTS:
+        if _paths_overlap(resolved_output, _resolve_path(known_root)):
+            raise ValueError(UNSAFE_EVENT_WINDOW_OUTPUT_MESSAGE)
 
     for input_path in [source_dividend_path, source_bar_path]:
         if input_path is not None and _paths_overlap(resolved_output, _resolve_path(input_path)):

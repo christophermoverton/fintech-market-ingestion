@@ -336,6 +336,10 @@ Metadata links the derived output to the dividend input path, bar input path,
 event-window configuration, row counts, and schema. These outputs remain derived
 research artifacts and are not canonical data.
 
+The writer rejects output roots that overlap curated dividend snapshots, derived
+dividend research marts, source dividend inputs, source bar inputs, or paths
+containing `canonical`.
+
 Python API entry points:
 
 ```python

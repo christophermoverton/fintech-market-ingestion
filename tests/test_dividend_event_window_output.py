@@ -1,4 +1,5 @@
 import json
+from pathlib import Path
 
 import pandas as pd
 import pytest
@@ -187,6 +188,34 @@ def test_event_window_output_writer_rejects_source_bar_overlap(event_window_resu
             output_root=source_bar_path,
             source_bar_path=source_bar_path,
         )
+
+
+def test_event_window_output_writer_rejects_default_dividend_research_mart_overlap_without_source_path(
+    event_window_result,
+):
+    with pytest.raises(ValueError, match="derived research path.*research mart"):
+        write_dividend_event_window_output(
+            event_window_result,
+            output_root=Path("data/research/corporate_actions/dividends/run-1"),
+        )
+
+
+def test_event_window_output_writer_allows_default_event_window_output_root(
+    event_window_result, tmp_path
+):
+    output_root = (
+        tmp_path / "data" / "research" / "corporate_actions" / "dividend_event_windows" / "run-1"
+    )
+
+    result = write_dividend_event_window_output(
+        event_window_result,
+        output_root=output_root,
+    )
+
+    assert result.data_path == output_root / DIVIDEND_EVENT_WINDOW_DATASET_FILENAME
+    assert result.metadata_path == output_root / DIVIDEND_EVENT_WINDOW_METADATA_FILENAME
+    assert result.data_path.exists()
+    assert result.metadata_path.exists()
 
 
 def test_join_dividend_events_to_bars_result_still_returns_frame_without_writing():
