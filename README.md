@@ -233,6 +233,18 @@ The quickstart is plain Python and safe for CI. It demonstrates snapshot ->
 research mart -> validation -> event-window join -> derived output metadata
 without calling Alpaca or mutating canonical repository data.
 
+Pipeline-style synthetic workflow:
+
+```bash
+python examples/dividend_research_pipeline_workflow.py \
+  --output-root artifacts/examples/dividend_research_pipeline_workflow
+```
+
+The workflow example is scheduler-free and uses small stage functions. It writes
+only under the configured output root and demonstrates snapshot -> research mart
+-> validation -> event-window join -> derived output metadata -> workflow
+summary.
+
 The deterministic curated snapshot remains the canonical ingestion output.
 
 For the full schema, metadata contract, CLI arguments, and a CI-safe sample-data example, see `docs/corporate_actions_dividends.md`.

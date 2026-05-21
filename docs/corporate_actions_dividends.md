@@ -362,6 +362,17 @@ It demonstrates snapshot -> research mart -> validation -> event-window join ->
 derived output metadata without calling Alpaca or mutating canonical repository
 data.
 
+For a scheduler-free pipeline-style workflow using small stage functions:
+
+```bash
+python examples/dividend_research_pipeline_workflow.py \
+  --output-root artifacts/examples/dividend_research_pipeline_workflow
+```
+
+The pipeline example uses synthetic local data only, writes only under the
+configured output root, and demonstrates snapshot -> research mart -> validation
+-> event-window join -> derived output metadata -> workflow summary.
+
 As with the rest of dividend research support, these joins are derived research views only. They do not implement adjusted prices, total-return reconstruction, dividend reinvestment, or backtest cash-flow logic.
 
 ## Normalized Schema
