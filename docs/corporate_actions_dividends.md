@@ -28,9 +28,7 @@ cash_dividends
 stock_dividends
 ```
 
-Nested `cash_dividends` rows normalize to `corporate_action_type =
-cash_dividend`. Nested `stock_dividends` rows normalize to
-`corporate_action_type = stock_dividend`. Cash-dividend groups are flattened
+Nested `cash_dividends` rows normalize to `corporate_action_type = cash_dividend`. Nested `stock_dividends` rows normalize to `corporate_action_type = stock_dividend`. Cash-dividend groups are flattened
 before stock-dividend groups, and API order is preserved within each group until
 the repository's normal deterministic output ordering is applied.
 
@@ -237,9 +235,7 @@ fintech-build-dividend-research-mart \
   --research-root data/research/corporate_actions/dividends
 ```
 
-The command prints a deterministic JSON summary to stdout. Add `--summary-output
-path/to/summary.json` to write the same JSON summary to a file. Parent
-directories are created when writing the summary file.
+The command prints a deterministic JSON summary to stdout. Add `--summary-output path/to/summary.json` to write the same JSON summary to a file. Parent directories are created when writing the summary file.
 
 Validate and inspect the derived research mart without mutating it:
 
