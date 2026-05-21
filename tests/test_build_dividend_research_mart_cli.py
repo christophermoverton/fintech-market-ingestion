@@ -2,7 +2,11 @@ import json
 from pathlib import Path
 
 import pytest
-import tomllib
+
+try:
+    import tomllib
+except ModuleNotFoundError:
+    import tomli as tomllib
 
 from src.cli import build_dividend_research_mart as cli
 from src.ingestion.corporate_actions_normalization import normalize_corporate_action_payload
