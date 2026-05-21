@@ -25,7 +25,8 @@ SUPPORTED_DIVIDEND_SOURCES = frozenset({"snapshot", "research-mart"})
 SUPPORTED_DATA_FORMATS = frozenset({"csv", "parquet"})
 UNSAFE_OUTPUT_PATH_MESSAGE = (
     "Dividend event-window output must be a derived research path and must not overlap "
-    "with curated/canonical input paths."
+    "with curated/canonical paths or input artifact roots, including bar, snapshot, and "
+    "research-mart paths."
 )
 
 
