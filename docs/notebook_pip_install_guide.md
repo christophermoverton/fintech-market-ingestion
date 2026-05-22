@@ -49,8 +49,11 @@ fintech-init-project --root . --notebooks
 ```
 
 **These files are local and user-owned.** They are not part of the installed
-package and will not be overwritten on package updates. The package does not
-read from these directories unless you pass explicit paths on the command line.
+package and will not be overwritten on package updates. Some backfill CLIs use
+local workspace-relative default paths (for example, default `--symbols` and
+`--out` locations), and those paths are always resolved relative to your
+current working directory. Run commands from the workspace root created by
+`fintech-init-project`, or pass explicit `--symbols` / `--out` paths.
 
 If you want to regenerate the sample files (e.g., after deleting them):
 
