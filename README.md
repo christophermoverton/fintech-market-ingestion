@@ -6,6 +6,28 @@ For **pip-install and notebook usage**, see [docs/notebook_pip_install_guide.md]
 
 ---
 
+## Release 0.8.0 Highlights
+
+Version `0.8.0` adds notebook-first and pip-install-friendly workflow support for historical bar ingestion.
+
+* New installed console scripts:
+  * `fintech-backfill-daily`
+  * `fintech-backfill-1m`
+  * `fintech-init-project`
+* New local workspace bootstrap command for pip-installed users:
+
+  ```bash
+  fintech-init-project --root .
+  ```
+
+* New notebook guide for local workspace setup, backfill examples, DuckDB spot-checks, and troubleshooting:
+  * [docs/notebook_pip_install_guide.md](docs/notebook_pip_install_guide.md)
+* Existing module entrypoints remain supported:
+  * `python -m src.ingestion.backfill_daily`
+  * `python -m src.ingestion.backfill_1m`
+
+---
+
 ## Architecture Overview
 
 ```

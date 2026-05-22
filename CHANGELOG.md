@@ -5,6 +5,56 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.0] - Notebook Ergonomics and Workspace Bootstrap - 2026-05-22
+
+### Added
+
+- **Issue #59: Notebook Ergonomics - Pip-Installed Backfill Commands and Workspace Bootstrap**
+  - Installed backfill console scripts:
+    - `fintech-backfill-daily`
+    - `fintech-backfill-1m`
+  - Installed local workspace bootstrap CLI:
+    - `fintech-init-project`
+  - Workspace bootstrap support for local, user-owned directories:
+    - `configs/`
+    - `data/curated/`
+    - `reports/`
+    - `artifacts/`
+    - optional `notebooks/`
+  - Generated sample workspace files:
+    - `configs/tickers_sample.txt`
+    - `.env.example`
+  - Notebook-first pip-install guide in:
+    - `docs/notebook_pip_install_guide.md`
+
+### Changed
+
+- README setup and configuration examples now align with the canonical Alpaca
+  environment variable names used by the runtime client:
+  - `ALPACA_API_KEY_ID`
+  - `ALPACA_API_SECRET_KEY`
+  - `ALPACA_DATA_BASE_URL`
+  - `ALPACA_FEED`
+- Release metadata updated for feature release `0.8.0`.
+- Development extras now include `twine` for release artifact validation.
+
+### Preserved
+
+- Existing corporate-actions console scripts remain unchanged.
+- Existing module entrypoints remain supported:
+  - `python -m src.ingestion.backfill_daily`
+  - `python -m src.ingestion.backfill_1m`
+- Existing repo-root workflows remain compatible when users pass explicit local
+  paths or run from a prepared workspace root.
+
+### Validation
+
+- `python -m pytest tests/test_init_project.py -v` - 16 tests passing
+- `python -m pytest` - 215 tests passing
+- `python -m ruff check src/cli/init_project.py tests/test_init_project.py` - passing
+- `python -m build` - wheel and sdist built successfully
+- `python -m twine check dist/fintech_market_ingestion-0.8.0.tar.gz dist/fintech_market_ingestion-0.8.0-py3-none-any.whl` - passing
+
 ## [0.7.1] - Alpaca Dividend Rate Normalization Patch - 2026-05-21
 
 ### Fixed
