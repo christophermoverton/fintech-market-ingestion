@@ -631,9 +631,10 @@ Remove-Item -Recurse -Force *.egg-info -ErrorAction SilentlyContinue
 Create a `.env` file in the project root:
 
 ```bash
-ALPACA_API_KEY=your_key_here
-ALPACA_SECRET_KEY=your_secret_here
-ALPACA_DATA_FEED=iex
+ALPACA_API_KEY_ID=your_key_here
+ALPACA_API_SECRET_KEY=your_secret_here
+ALPACA_DATA_BASE_URL=https://data.alpaca.markets
+ALPACA_FEED=iex
 ```
 
 ---
