@@ -99,7 +99,7 @@ def main(argv: list[str] | None = None) -> int:
     )
     args = ap.parse_args(argv)
 
-    root = Path(args.root).resolve()
+    root = Path(args.root).expanduser().resolve(strict=False)
 
     print(f"Initializing workspace at: {root}")
     print()
