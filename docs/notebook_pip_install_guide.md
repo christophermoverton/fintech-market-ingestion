@@ -250,7 +250,7 @@ The table below summarises which files belong to the installed package and
 which are local to your workspace:
 
 | Path | Owner | Notes |
-|------|-------|-------|
+| --- | --- | --- |
 | `configs/` | **Local workspace** | Created by `fintech-init-project` |
 | `configs/tickers_sample.txt` | **Local workspace** | Editable symbol list |
 | `data/` | **Local workspace** | Parquet datasets |
