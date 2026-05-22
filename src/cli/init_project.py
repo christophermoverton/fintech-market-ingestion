@@ -33,10 +33,10 @@ MA
 ENV_EXAMPLE_CONTENT = """\
 # Alpaca API credentials - copy this file to .env and fill in your keys.
 # Do NOT commit .env to version control.
-ALPACA_API_KEY=your_api_key_here
-ALPACA_SECRET_KEY=your_secret_key_here
+ALPACA_API_KEY_ID=your_api_key_id_here
+ALPACA_API_SECRET_KEY=your_secret_key_here
 # Optional: override the data feed. Default is iex (free tier).
-ALPACA_DATA_FEED=iex
+ALPACA_FEED=iex
 """
 
 CREATED = "created"

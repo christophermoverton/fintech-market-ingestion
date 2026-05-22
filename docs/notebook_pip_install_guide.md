@@ -75,9 +75,9 @@ cp .env.example .env
 Edit `.env`:
 
 ```env
-ALPACA_API_KEY=your_api_key_here
-ALPACA_SECRET_KEY=your_secret_key_here
-ALPACA_DATA_FEED=iex
+ALPACA_API_KEY_ID=your_api_key_id_here
+ALPACA_API_SECRET_KEY=your_secret_key_here
+ALPACA_FEED=iex
 ```
 
 `iex` is the free-tier data feed. It covers US equities with a 15-minute
@@ -109,7 +109,7 @@ Lines that start with `#` are treated as comments and ignored.
 
 ## 5. Daily Backfill
 
-### Minimal Example — Q1 2025, 3 symbols
+### Minimal Example — Q1 2025, sample symbol list
 
 A good first run to verify connectivity and credentials before a larger job:
 
@@ -126,8 +126,8 @@ fintech-backfill-daily \
 Parquet output is written to:
 
 ```
-data/curated/bars_daily/symbol=AAPL/year=2025/part-0.parquet
-data/curated/bars_daily/symbol=MSFT/year=2025/part-0.parquet
+data/curated/bars_daily/symbol=AAPL/date=2025-01-02/part-0.parquet
+data/curated/bars_daily/symbol=MSFT/date=2025-01-02/part-0.parquet
 ...
 ```
 
@@ -212,11 +212,12 @@ import duckdb
 
 conn = duckdb.connect()
 
-# Daily bars — all symbols for 2025
+# Daily bars — Q1 2025
 df = conn.execute("""
     SELECT symbol, COUNT(*) AS rows, MIN(ts_utc) AS first_bar, MAX(ts_utc) AS last_bar
     FROM read_parquet('data/curated/bars_daily/**/*.parquet', hive_partitioning=true)
-    WHERE year = 2025
+    WHERE ts_utc >= TIMESTAMP '2025-01-01'
+      AND ts_utc < TIMESTAMP '2025-04-01'
     GROUP BY symbol
     ORDER BY symbol
 """).df()
@@ -280,13 +281,13 @@ os.chdir("/path/to/your/workspace")
 If you see an `AuthenticationError` or `401` response, your `.env` file is
 either missing, in the wrong directory, or contains incorrect keys.
 
-Check that `ALPACA_API_KEY` and `ALPACA_SECRET_KEY` are set:
+Check that `ALPACA_API_KEY_ID` and `ALPACA_API_SECRET_KEY` are set:
 
 ```python
 import os
 from dotenv import load_dotenv
 load_dotenv()
-print(os.environ.get("ALPACA_API_KEY", "NOT SET"))
+print(os.environ.get("ALPACA_API_KEY_ID", "NOT SET"))
 ```
 
 ### Missing symbols file

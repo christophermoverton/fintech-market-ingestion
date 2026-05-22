@@ -76,8 +76,9 @@ def test_creates_env_example(tmp_path: Path) -> None:
     env_example = tmp_path / ".env.example"
     assert env_example.is_file()
     content = env_example.read_text()
-    assert "ALPACA_API_KEY" in content
-    assert "ALPACA_SECRET_KEY" in content
+    assert "ALPACA_API_KEY_ID" in content
+    assert "ALPACA_API_SECRET_KEY" in content
+    assert "ALPACA_FEED" in content
 
 
 # ---------------------------------------------------------------------------
