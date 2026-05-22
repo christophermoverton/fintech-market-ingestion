@@ -51,6 +51,9 @@ dev = [
 ]
 
 [project.scripts]
+fintech-backfill-daily = "src.ingestion.backfill_daily:main"
+fintech-backfill-1m = "src.ingestion.backfill_1m:main"
+fintech-init-project = "src.cli.init_project:main"
 fintech-build-dividend-research-mart = "src.cli.build_dividend_research_mart:main"
 fintech-ingest-corporate-actions = "src.cli.ingest_corporate_actions:main"
 fintech-join-dividend-event-windows = "src.cli.join_dividend_event_windows:main"
