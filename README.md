@@ -15,7 +15,7 @@ Alpaca Client (retry + pagination)
     ↓
 Normalization Layer (UTC + dedupe)
     ↓
-Partitioned Parquet (symbol/year or symbol/date)
+Partitioned Parquet (symbol/date)
     ↓
 DuckDB Analytics + QA Observability
 ```
@@ -49,7 +49,7 @@ DuckDB Analytics + QA Observability
 * Writes partitioned Parquet:
 
   ```
-  data/curated/bars_daily/symbol=XYZ/year=YYYY/
+  data/curated/bars_daily/symbol=XYZ/date=YYYY-MM-DD/
   ```
 * Safe to re-run (idempotent)
 
@@ -672,7 +672,7 @@ python -m src.ingestion.backfill_daily --start 2023-01-01 --end 2026-01-01
 ### Storage Layout
 
 ```
-data/curated/bars_daily/symbol=XYZ/year=YYYY/part-*.parquet
+data/curated/bars_daily/symbol=XYZ/date=YYYY-MM-DD/part-*.parquet
 ```
 
 ---
