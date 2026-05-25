@@ -107,3 +107,14 @@ This foundation is local and CI-safe. It does not implement Google Drive,
 save/restore CLI behavior, session restore, background sync, remote metadata,
 or a canonical artifact registry. Persisted copies remain transport artifacts,
 not the source of truth.
+
+## Google Drive Mounted-Path Adapter
+
+M9.4 adds a Google Drive adapter that works only over an already-mounted
+filesystem path, such as `/content/drive/MyDrive/...` in Colab. It reuses the
+same explicit persistence operations as the local adapter and remains a
+transport utility only. It does not mount Drive, authenticate, call Google APIs,
+run background sync, or make Drive copies canonical.
+
+See [google_drive_persistence.md](google_drive_persistence.md) for mounted-path
+usage and boundaries.

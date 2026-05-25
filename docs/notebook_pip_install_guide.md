@@ -68,6 +68,10 @@ a new timestamped session manifest by default, and existing session manifests
 are not overwritten. Session reuse and restore behavior are deferred to later
 project-session work.
 
+For mounted-path Google Drive persistence boundaries, see
+[google_drive_persistence.md](google_drive_persistence.md). The adapter expects
+Drive to already be mounted and does not use Google APIs or authenticate.
+
 **These files are local and user-owned.** They are not part of the installed
 package and will not be overwritten on package updates. Some backfill CLIs use
 local workspace-relative default paths (for example, default `--symbols` and
