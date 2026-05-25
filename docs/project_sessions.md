@@ -77,6 +77,12 @@ curated data, does not copy research data, does not run save/restore behavior,
 and does not execute persistence adapters. Google Drive behavior is not
 implemented by session-aware bootstrap.
 
+Each `--with-session` bootstrap represents a new portable project session and
+creates a new timestamped manifest by default. Existing session manifests are
+not overwritten; if the same computed manifest path already exists, the write is
+reported as skipped. Explicit session reuse, selection, and restore behavior are
+deferred to later M9 save/restore work.
+
 ## Current Deferrals
 
 This contract layer does not yet implement Google Drive mount handling,

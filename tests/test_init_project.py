@@ -6,12 +6,13 @@ from pathlib import Path
 
 import pytest
 
+import src.cli.init_project as init_project
 from src.cli.init_project import (
     ENV_EXAMPLE_CONTENT,
     TICKERS_SAMPLE_CONTENT,
     main,
 )
-from src.sessions import load_manifest
+from src.sessions import create_project_session_manifest, load_manifest
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -257,6 +258,66 @@ def test_with_session_does_not_mutate_research_reports_or_curated_data(tmp_path:
     assert list((tmp_path / "data" / "curated").iterdir()) == []
     assert not (tmp_path / "data" / "research").exists()
     assert list((tmp_path / "reports").iterdir()) == []
+
+
+def test_repeated_with_session_creates_new_timestamped_sessions(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    created_at_values = iter(["2026-05-25T22:20:32Z", "2026-05-25T22:20:33Z"])
+
+    def create_manifest_with_next_timestamp(*, session_name: str):
+        return create_project_session_manifest(
+            session_name=session_name,
+            created_at_utc=next(created_at_values),
+            package_version="0.8.0",
+        )
+
+    monkeypatch.setattr(
+        init_project,
+        "create_project_session_manifest",
+        create_manifest_with_next_timestamp,
+    )
+
+    run(tmp_path, ["--with-session", "--session-name", "demo"])
+    run(tmp_path, ["--with-session", "--session-name", "demo"])
+
+    manifests = session_manifest_files(tmp_path)
+    session_ids = {load_manifest(path).session_id for path in manifests}
+
+    assert len(manifests) == 2
+    assert session_ids == {
+        "session_20260525_222032_demo",
+        "session_20260525_222033_demo",
+    }
+
+
+def test_with_session_collision_skips_without_overwriting(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    def create_manifest_with_fixed_timestamp(*, session_name: str):
+        return create_project_session_manifest(
+            session_name=session_name,
+            created_at_utc="2026-05-25T22:20:32Z",
+            package_version="0.8.0",
+        )
+
+    monkeypatch.setattr(
+        init_project,
+        "create_project_session_manifest",
+        create_manifest_with_fixed_timestamp,
+    )
+
+    run(tmp_path, ["--with-session", "--session-name", "demo"])
+    manifest_path = session_manifest_files(tmp_path)[0]
+    original_text = manifest_path.read_text(encoding="utf-8")
+
+    run(tmp_path, ["--with-session", "--session-name", "demo"])
+    captured = capsys.readouterr()
+
+    assert len(session_manifest_files(tmp_path)) == 1
+    assert manifest_path.read_text(encoding="utf-8") == original_text
+    assert "artifacts" in captured.out
+    assert "skipped (already exists)" in captured.out
 
 
 def test_force_with_session_still_only_overwrites_generated_sample_files(tmp_path: Path) -> None:

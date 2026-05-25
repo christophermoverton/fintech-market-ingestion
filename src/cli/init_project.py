@@ -190,6 +190,7 @@ def main(argv: list[str] | None = None) -> int:
         print()
         print("Project session:")
         print("  A metadata-only session manifest was written under artifacts/sessions/.")
+        print("  Re-running --with-session creates a new timestamped session manifest.")
         print("  Session initialization does not copy curated data or run persistence sync.")
 
     return 0
