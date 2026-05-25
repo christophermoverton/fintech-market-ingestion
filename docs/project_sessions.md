@@ -118,3 +118,61 @@ run background sync, or make Drive copies canonical.
 
 See [google_drive_persistence.md](google_drive_persistence.md) for mounted-path
 usage and boundaries.
+
+## Explicit Save And Restore
+
+M9.5 adds explicit save and restore commands. They are dry-run friendly and use
+the persistence adapters as transport utilities only.
+
+Save selected local paths to a local destination:
+
+```bash
+fintech-save-session \
+  --root . \
+  --session-id <session_id> \
+  --adapter local \
+  --destination artifacts/session_exports/<session_id> \
+  --include configs artifacts reports
+```
+
+Save selected paths to an already-mounted Google Drive path:
+
+```bash
+fintech-save-session \
+  --root . \
+  --session-id <session_id> \
+  --adapter google-drive \
+  --destination "/content/drive/MyDrive/fintech-market-ingestion/<session_name>" \
+  --include configs artifacts reports
+```
+
+Preview a restore without writing files:
+
+```bash
+fintech-restore-session \
+  --root . \
+  --adapter local \
+  --source artifacts/session_exports/<session_id> \
+  --dry-run
+```
+
+Restore and allow overwrites only when explicitly requested:
+
+```bash
+fintech-restore-session \
+  --root . \
+  --adapter local \
+  --source artifacts/session_exports/<session_id> \
+  --force
+```
+
+Save writes `session_save_manifest.json` under the destination root when files
+are copied. Restore writes
+`artifacts/restores/<restore_id>/restore_manifest.json` when restore is
+executed. Dry-run mode does not write files or manifests.
+
+Restore refuses to overwrite existing local files unless `--force` is passed,
+and it never deletes local files. Curated data under `data/curated` is excluded
+from save plans by default; saving it requires the explicit
+`--include-curated-data` flag and an include path that selects it. Persisted
+copies remain transport artifacts, not canonical data.

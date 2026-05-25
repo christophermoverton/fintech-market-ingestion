@@ -46,9 +46,28 @@ files into the mounted path, read files back out, check existence, and list file
 under adapter-relative prefixes. It does not decide which project files should
 be saved and does not make Drive copies canonical.
 
-Use save plans to inspect selected files before any copy operation. Later M9
-issues may add save/restore commands on top of this foundation, but M9.4 does
-not add a CLI.
+Use save plans to inspect selected files before any copy operation.
+
+M9.5 adds save/restore CLIs that can use the mounted-path adapter explicitly:
+
+```bash
+fintech-save-session \
+  --root . \
+  --session-id <session_id> \
+  --adapter google-drive \
+  --destination "/content/drive/MyDrive/fintech-market-ingestion/<session_name>" \
+  --include configs artifacts reports
+
+fintech-restore-session \
+  --root . \
+  --adapter google-drive \
+  --source "/content/drive/MyDrive/fintech-market-ingestion/<session_name>" \
+  --dry-run
+```
+
+The commands still do not mount Drive, authenticate, use Google APIs, or run
+background sync. Restore refuses to overwrite local files unless `--force` is
+passed.
 
 Curated data should remain opt-in in later save policies. Drive copies are
 export/restore aids, not the source of truth for curated data, research outputs,
