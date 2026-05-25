@@ -89,3 +89,21 @@ This contract layer does not yet implement Google Drive mount handling,
 save/restore commands, background sync, or expanded curated-data policy
 enforcement. Those behaviors belong to later M9 issues and should build on this
 manifest contract without changing ingestion or backfill semantics.
+
+## Local Persistence Foundation
+
+M9.3 adds a small persistence adapter interface and a local filesystem adapter
+for explicit project-session file transport. The adapter copies, reads, lists,
+and creates directories only when called directly. It does not run in the
+background, discover canonical artifacts, or decide which files should be saved.
+
+Save plans provide the inspectable selection step before copying. A save plan
+walks explicit workspace-relative include paths, removes excluded paths, records
+file-only entries, and serializes deterministic JSON with sorted entries and
+stable formatting. An empty include list produces an empty plan; no files are
+selected by default.
+
+This foundation is local and CI-safe. It does not implement Google Drive,
+save/restore CLI behavior, session restore, background sync, remote metadata,
+or a canonical artifact registry. Persisted copies remain transport artifacts,
+not the source of truth.
