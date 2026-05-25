@@ -11,6 +11,7 @@ from src.cli.init_project import (
     TICKERS_SAMPLE_CONTENT,
     main,
 )
+from src.sessions import load_manifest
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -22,6 +23,13 @@ def run(tmp_path: Path, extra_args: list[str] | None = None) -> int:
     if extra_args:
         args.extend(extra_args)
     return main(args)
+
+
+def session_manifest_files(root: Path) -> list[Path]:
+    sessions_root = root / "artifacts" / "sessions"
+    if not sessions_root.exists():
+        return []
+    return sorted(sessions_root.glob("*/session_manifest.json"))
 
 
 # ---------------------------------------------------------------------------
@@ -172,3 +180,97 @@ def test_idempotent_on_second_run(tmp_path: Path) -> None:
     rc = run(tmp_path)
     assert rc == 0
     assert (tmp_path / "configs" / "tickers_sample.txt").is_file()
+
+
+# ---------------------------------------------------------------------------
+# Opt-in project-session bootstrap
+# ---------------------------------------------------------------------------
+
+
+def test_does_not_create_session_manifest_by_default(tmp_path: Path) -> None:
+    run(tmp_path)
+
+    assert session_manifest_files(tmp_path) == []
+
+
+def test_session_name_without_with_session_does_not_create_manifest(tmp_path: Path) -> None:
+    run(tmp_path, ["--session-name", "demo"])
+
+    assert session_manifest_files(tmp_path) == []
+
+
+def test_with_session_creates_valid_manifest_under_session_artifacts(tmp_path: Path) -> None:
+    run(tmp_path, ["--notebooks", "--with-session", "--session-name", "demo"])
+
+    manifests = session_manifest_files(tmp_path)
+    assert len(manifests) == 1
+    manifest_path = manifests[0]
+    manifest = load_manifest(manifest_path)
+
+    assert manifest_path == (
+        tmp_path / "artifacts" / "sessions" / manifest.session_id / "session_manifest.json"
+    )
+    assert manifest.session_name == "demo"
+    assert manifest.workspace.root_semantics == "workspace_relative"
+    assert manifest.workspace.paths.to_dict() == {
+        "configs": "configs",
+        "curated_data": "data/curated",
+        "research_data": "data/research",
+        "artifacts": "artifacts",
+        "reports": "reports",
+        "notebooks": "notebooks",
+    }
+    assert manifest.persistence.adapter == "none"
+    assert manifest.persistence.destination is None
+    assert manifest.save_policy.mode == "metadata_only"
+    assert manifest.save_policy.include == ()
+    assert manifest.save_policy.exclude == ("data/curated",)
+    assert manifest.save_policy.include_curated_data is False
+
+
+def test_with_session_defaults_session_name(tmp_path: Path) -> None:
+    run(tmp_path, ["--with-session"])
+
+    manifest = load_manifest(session_manifest_files(tmp_path)[0])
+
+    assert manifest.session_name == "default"
+    assert manifest.session_id.endswith("_default")
+
+
+def test_with_session_sanitizes_session_id_for_path_usage(tmp_path: Path) -> None:
+    run(tmp_path, ["--with-session", "--session-name", "Demo Session / 1"])
+
+    manifest_path = session_manifest_files(tmp_path)[0]
+    manifest = load_manifest(manifest_path)
+
+    assert manifest.session_name == "Demo Session / 1"
+    assert manifest.session_id.endswith("_demo_session_1")
+    assert "/" not in manifest.session_id
+    assert "\\" not in manifest.session_id
+    assert manifest_path.parent.name == manifest.session_id
+
+
+def test_with_session_does_not_mutate_research_reports_or_curated_data(tmp_path: Path) -> None:
+    run(tmp_path, ["--with-session", "--session-name", "demo"])
+
+    assert (tmp_path / "data" / "curated").is_dir()
+    assert list((tmp_path / "data" / "curated").iterdir()) == []
+    assert not (tmp_path / "data" / "research").exists()
+    assert list((tmp_path / "reports").iterdir()) == []
+
+
+def test_force_with_session_still_only_overwrites_generated_sample_files(tmp_path: Path) -> None:
+    run(tmp_path, ["--with-session", "--session-name", "demo"])
+    unrelated_session_manifest = (
+        tmp_path / "artifacts" / "sessions" / "session_existing" / "session_manifest.json"
+    )
+    unrelated_session_manifest.parent.mkdir(parents=True)
+    unrelated_content = '{"sentinel": true}\n'
+    unrelated_session_manifest.write_text(unrelated_content, encoding="utf-8")
+
+    tickers = tmp_path / "configs" / "tickers_sample.txt"
+    tickers.write_text("# custom\nCUSTOM\n", encoding="utf-8")
+    run(tmp_path, ["--force", "--with-session", "--session-name", "demo"])
+
+    assert tickers.read_text(encoding="utf-8") == TICKERS_SAMPLE_CONTENT
+    assert unrelated_session_manifest.read_text(encoding="utf-8") == unrelated_content

@@ -57,9 +57,29 @@ Durable paths are workspace-relative wherever possible. Absolute local paths and
 Windows drive-qualified paths are rejected in durable path fields unless a later
 workflow stores them under an explicit runtime-only section.
 
+## Session-Aware Bootstrap
+
+Project-session creation is opt-in during workspace bootstrap:
+
+```bash
+fintech-init-project --root . --notebooks --with-session --session-name demo
+```
+
+This preserves the normal `fintech-init-project` behavior and additionally
+writes:
+
+```text
+artifacts/sessions/<session_id>/session_manifest.json
+```
+
+The generated manifest is metadata only. Session initialization does not copy
+curated data, does not copy research data, does not run save/restore behavior,
+and does not execute persistence adapters. Google Drive behavior is not
+implemented by session-aware bootstrap.
+
 ## Current Deferrals
 
-This contract layer does not yet implement session-aware bootstrap, Google Drive
-mount handling, save/restore commands, background sync, or expanded curated-data
-policy enforcement. Those behaviors belong to later M9 issues and should build
-on this manifest contract without changing ingestion or backfill semantics.
+This contract layer does not yet implement Google Drive mount handling,
+save/restore commands, background sync, or expanded curated-data policy
+enforcement. Those behaviors belong to later M9 issues and should build on this
+manifest contract without changing ingestion or backfill semantics.

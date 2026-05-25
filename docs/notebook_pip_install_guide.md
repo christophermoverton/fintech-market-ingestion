@@ -48,6 +48,23 @@ To also create a `notebooks/` directory:
 fintech-init-project --root . --notebooks
 ```
 
+To also create a portable project-session manifest for notebook/cloud resume
+workflows:
+
+```bash
+fintech-init-project --root . --notebooks --with-session --session-name demo
+```
+
+Session-aware bootstrap writes a metadata-only manifest under:
+
+```text
+artifacts/sessions/<session_id>/session_manifest.json
+```
+
+It does not copy curated data, run save/restore behavior, execute persistence
+adapters, require Google Drive, or require Google credentials. The local
+workspace remains the primary runtime view.
+
 **These files are local and user-owned.** They are not part of the installed
 package and will not be overwritten on package updates. Some backfill CLIs use
 local workspace-relative default paths (for example, default `--symbols` and

@@ -16,6 +16,8 @@ from src.sessions.session_manifest import (
 from src.sessions.session_paths import WorkspacePaths
 
 DEFAULT_SESSION_MANIFEST_PATH = Path("artifacts/project_session/session_manifest.json")
+SESSION_MANIFEST_FILENAME = "session_manifest.json"
+SESSIONS_ARTIFACT_DIR = Path("artifacts/sessions")
 
 
 def create_project_session_manifest(
@@ -64,3 +66,21 @@ def write_project_session_manifest(
     """Write only the session manifest JSON artifact."""
 
     return write_manifest(manifest, output_path)
+
+
+def session_manifest_path(workspace_root: Path | str, session_id: str) -> Path:
+    """Return the CLI session-manifest path for a workspace and session."""
+
+    return Path(workspace_root) / SESSIONS_ARTIFACT_DIR / session_id / SESSION_MANIFEST_FILENAME
+
+
+def write_project_session_manifest_for_workspace(
+    workspace_root: Path | str,
+    manifest: SessionManifest,
+) -> Path:
+    """Write a workspace-scoped session manifest under artifacts/sessions."""
+
+    return write_project_session_manifest(
+        manifest,
+        session_manifest_path(workspace_root, manifest.session_id),
+    )

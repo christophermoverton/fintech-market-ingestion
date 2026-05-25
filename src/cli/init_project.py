@@ -6,6 +6,7 @@ mutate any package-internal directories.
 
 Usage:
     fintech-init-project [--root PATH] [--notebooks] [--force]
+    fintech-init-project [--root PATH] [--notebooks] [--with-session] [--session-name NAME]
     python -m src.cli.init_project [--root PATH] [--notebooks] [--force]
 """
 
@@ -14,6 +15,12 @@ from __future__ import annotations
 import argparse
 import sys
 from pathlib import Path
+
+from src.sessions import (
+    create_project_session_manifest,
+    session_manifest_path,
+    write_project_session_manifest_for_workspace,
+)
 
 TICKERS_SAMPLE_CONTENT = """\
 # Sample ticker list for fintech-market-ingestion.
@@ -44,6 +51,7 @@ ALPACA_DATA_BASE_URL=https://data.alpaca.markets
 CREATED = "created"
 SKIPPED = "skipped (already exists)"
 FORCED = "overwritten (--force)"
+DEFAULT_SESSION_NAME = "default"
 
 
 def _create_dirs(root: Path, include_notebooks: bool) -> list[tuple[str, str]]:
@@ -73,6 +81,15 @@ def _write_file(path: Path, content: str, force: bool) -> str:
     return FORCED if (existed and force) else CREATED
 
 
+def _create_session_manifest(root: Path, session_name: str) -> tuple[str, str]:
+    manifest = create_project_session_manifest(session_name=session_name)
+    manifest_path = session_manifest_path(root, manifest.session_id)
+    status = SKIPPED if manifest_path.exists() else CREATED
+    if status == CREATED:
+        write_project_session_manifest_for_workspace(root, manifest)
+    return (str(manifest_path.relative_to(root)), status)
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(
         prog="fintech-init-project",
@@ -99,6 +116,23 @@ def main(argv: list[str] | None = None) -> int:
         default=False,
         help="Overwrite generated sample files (tickers_sample.txt, .env.example) if they exist.",
     )
+    ap.add_argument(
+        "--with-session",
+        action="store_true",
+        default=False,
+        help=(
+            "Also create a metadata-only project-session manifest under "
+            "artifacts/sessions/<session_id>/."
+        ),
+    )
+    ap.add_argument(
+        "--session-name",
+        default=None,
+        help=(
+            "Project session name to record when --with-session is used "
+            f"(default: {DEFAULT_SESSION_NAME})."
+        ),
+    )
     args = ap.parse_args(argv)
 
     root = Path(args.root).expanduser().resolve(strict=False)
@@ -119,6 +153,10 @@ def main(argv: list[str] | None = None) -> int:
     env_example_path = root / ".env.example"
     env_status = _write_file(env_example_path, ENV_EXAMPLE_CONTENT, args.force)
     summary.append((str(env_example_path.relative_to(root)), env_status))
+
+    if args.with_session:
+        session_name = args.session_name or DEFAULT_SESSION_NAME
+        summary.append(_create_session_manifest(root, session_name))
 
     # Print summary
     max_path_len = max(len(p) for p, _ in summary)
@@ -147,6 +185,12 @@ def main(argv: list[str] | None = None) -> int:
     print("       --feed iex \\")
     print("       --sleep-ms 200 \\")
     print("       --no-progress")
+
+    if args.with_session:
+        print()
+        print("Project session:")
+        print("  A metadata-only session manifest was written under artifacts/sessions/.")
+        print("  Session initialization does not copy curated data or run persistence sync.")
 
     return 0
 
