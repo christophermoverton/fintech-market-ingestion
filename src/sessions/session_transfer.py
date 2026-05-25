@@ -176,9 +176,10 @@ def restore_files(
     skipped_count = 0
     collision_count = len(collisions)
     for entry in entries:
+        destination_existed = (root / entry.destination_path).exists()
         adapter.read_file(entry.source_path, root / entry.destination_path)
         row = entry.to_dict()
-        row["status"] = "restored"
+        row["status"] = "restored_overwrite" if destination_existed else "restored"
         rows.append(row)
         restored_count += 1
     return rows, restored_count, skipped_count, collision_count
@@ -193,11 +194,13 @@ def build_restore_manifest(
     force: bool,
     files: Sequence[dict[str, Any]],
 ) -> dict[str, Any]:
-    restored_file_count = sum(1 for item in files if item.get("status") == "restored")
+    restored_statuses = {"restored", "restored_overwrite"}
+    restored_file_count = sum(1 for item in files if item.get("status") in restored_statuses)
+    overwritten_file_count = sum(1 for item in files if item.get("status") == "restored_overwrite")
     skipped_file_count = sum(
         1 for item in files if str(item.get("status", "")).startswith("skipped")
     )
-    collision_count = sum(1 for item in files if item.get("status") == "skipped_existing")
+    collision_count = skipped_file_count + overwritten_file_count
     return {
         "schema_version": SESSION_TRANSFER_SCHEMA_VERSION,
         "operation": "restore",
@@ -210,6 +213,7 @@ def build_restore_manifest(
         "restored_file_count": restored_file_count,
         "skipped_file_count": skipped_file_count,
         "collision_count": collision_count,
+        "overwritten_file_count": overwritten_file_count,
         "files": list(files),
     }
 

@@ -78,7 +78,27 @@ def test_restore_session_manifest_is_deterministic_when_executed(tmp_path: Path)
     assert manifest["operation"] == "restore"
     assert manifest["adapter"] == "local"
     assert manifest["restored_file_count"] == 1
+    assert manifest["overwritten_file_count"] == 0
+    assert manifest["collision_count"] == 0
     assert manifest["files"][0]["status"] == "restored"
+
+
+def test_restore_session_force_manifest_records_overwrite(tmp_path: Path) -> None:
+    source = tmp_path / "exports"
+    workspace = tmp_path / "workspace"
+    _write_text(source / "configs" / "tickers.txt", "AAPL\n")
+    _write_text(workspace / "configs" / "tickers.txt", "LOCAL\n")
+
+    assert main(["--root", str(workspace), "--source", str(source), "--force"]) == 0
+
+    manifest_path = next((workspace / "artifacts" / "restores").glob("*/restore_manifest.json"))
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+
+    assert manifest["restored_file_count"] == 1
+    assert manifest["overwritten_file_count"] == 1
+    assert manifest["collision_count"] == 1
+    assert manifest["skipped_file_count"] == 0
+    assert manifest["files"][0]["status"] == "restored_overwrite"
 
 
 def test_restore_session_skips_save_metadata_file(tmp_path: Path) -> None:

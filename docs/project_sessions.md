@@ -176,3 +176,6 @@ and it never deletes local files. Curated data under `data/curated` is excluded
 from save plans by default; saving it requires the explicit
 `--include-curated-data` flag and an include path that selects it. Persisted
 copies remain transport artifacts, not canonical data.
+Restore manifests distinguish normal restores from forced overwrites using
+`restored` and `restored_overwrite` file statuses, with
+`overwritten_file_count` reporting forced replacements.
