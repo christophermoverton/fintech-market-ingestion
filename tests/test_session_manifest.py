@@ -156,8 +156,13 @@ def test_absolute_path_outside_workspace_is_rejected(tmp_path: Path) -> None:
 
 
 def test_absolute_workspace_path_is_rejected() -> None:
-    with pytest.raises(ValueError, match="workspace-relative, not absolute"):
+    with pytest.raises(ValueError, match="workspace-relative, not drive-qualified"):
         WorkspacePaths(configs="C:/Temp/project/configs")
+
+
+def test_drive_qualified_windows_path_is_rejected() -> None:
+    with pytest.raises(ValueError, match="drive-qualified"):
+        WorkspacePaths(configs="C:Temp/project/configs")
 
 
 def test_parent_traversal_workspace_path_is_rejected() -> None:
@@ -166,12 +171,22 @@ def test_parent_traversal_workspace_path_is_rejected() -> None:
 
 
 def test_persistence_destination_avoids_absolute_path_leakage() -> None:
-    with pytest.raises(ManifestValidationError, match="persistence.destination.*absolute"):
+    with pytest.raises(ManifestValidationError, match="persistence.destination.*drive-qualified"):
         create_project_session_manifest(
             session_name="demo",
             created_at_utc=FIXED_CREATED_AT,
             persistence_adapter="drive",
             persistence_destination="C:/Temp/session-copy",
+        )
+
+
+def test_drive_qualified_persistence_destination_is_rejected() -> None:
+    with pytest.raises(ManifestValidationError, match="drive-qualified"):
+        create_project_session_manifest(
+            session_name="demo",
+            created_at_utc=FIXED_CREATED_AT,
+            persistence_adapter="local_copy",
+            persistence_destination="C:Temp/session-copy",
         )
 
 

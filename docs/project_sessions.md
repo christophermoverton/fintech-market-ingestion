@@ -53,9 +53,9 @@ The initial manifest schema records:
 - persistence `adapter`, `destination`, and runtime-only settings
 - save-policy `mode`, `include`, `exclude`, and `include_curated_data`
 
-Durable paths are workspace-relative wherever possible. Absolute local paths are
-rejected in durable path fields unless a later workflow stores them under an
-explicit runtime-only section.
+Durable paths are workspace-relative wherever possible. Absolute local paths and
+Windows drive-qualified paths are rejected in durable path fields unless a later
+workflow stores them under an explicit runtime-only section.
 
 ## Current Deferrals
 

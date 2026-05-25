@@ -77,7 +77,10 @@ def normalize_workspace_relative_path(path: Path | str, *, field_name: str = "pa
         raise ValueError(f"{field_name} must be a non-empty relative path")
     if raw.startswith("~"):
         raise ValueError(f"{field_name} must be workspace-relative, not home-relative: {raw}")
-    if PureWindowsPath(raw).is_absolute() or PurePosixPath(raw).is_absolute():
+    windows_path = PureWindowsPath(raw)
+    if windows_path.drive:
+        raise ValueError(f"{field_name} must be workspace-relative, not drive-qualified: {raw}")
+    if windows_path.is_absolute() or PurePosixPath(raw).is_absolute():
         raise ValueError(f"{field_name} must be workspace-relative, not absolute: {raw}")
 
     normalized = raw.replace("\\", "/")
