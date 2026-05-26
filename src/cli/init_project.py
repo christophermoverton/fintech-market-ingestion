@@ -7,7 +7,7 @@ mutate any package-internal directories.
 Usage:
     fintech-init-project [--root PATH] [--notebooks] [--force]
     fintech-init-project [--root PATH] [--notebooks] [--with-session] [--session-name NAME]
-    python -m src.cli.init_project [--root PATH] [--notebooks] [--force]
+    python -m src.cli.init_project [--root PATH] [--notebooks] [--with-session] [--session-name NAME] [--force]
 """
 
 from __future__ import annotations
