@@ -48,6 +48,59 @@ To also create a `notebooks/` directory:
 fintech-init-project --root . --notebooks
 ```
 
+To also create a portable project-session manifest for notebook/cloud resume
+workflows:
+
+```bash
+fintech-init-project --root . --notebooks --with-session --session-name demo
+```
+
+Session-aware bootstrap writes a metadata-only manifest under:
+
+```text
+artifacts/sessions/<session_id>/session_manifest.json
+```
+
+It does not copy curated data, run save/restore behavior, execute persistence
+adapters, require Google Drive, or require Google credentials. The local
+workspace remains the primary runtime view. Re-running `--with-session` creates
+a new timestamped session manifest by default, and existing session manifests
+are not overwritten. Automatic session reuse/restore within
+`fintech-init-project --with-session` is deferred to later project-session
+work; explicit `fintech-save-session` and `fintech-restore-session` commands
+are available separately.
+
+For mounted-path Google Drive persistence boundaries, see
+[google_drive_persistence.md](google_drive_persistence.md). The adapter expects
+Drive to already be mounted and does not use Google APIs or authenticate.
+Explicit save/restore commands are available once you have a session ID:
+
+```bash
+fintech-save-session \
+  --root /content/fintech-market-ingestion-demo \
+  --session-id <session_id> \
+  --policy artifacts_and_reports \
+  --adapter local \
+  --destination /content/fintech-session-export
+
+fintech-restore-session \
+  --root /content/fintech-restore-check \
+  --adapter local \
+  --source /content/fintech-session-export \
+  --dry-run
+```
+
+Restore does not overwrite existing files unless `--force` is passed. Curated
+data is excluded from saves by default. Use `--dry-run` before saving to a
+mounted Drive path, especially before any curated-data policy.
+
+For a runnable local notebook-style walkthrough that uses only tiny synthetic
+files:
+
+```bash
+python examples/project_session_quickstart.py --output-root artifacts/examples/project_session_quickstart
+```
+
 **These files are local and user-owned.** They are not part of the installed
 package and will not be overwritten on package updates. Some backfill CLIs use
 local workspace-relative default paths (for example, default `--symbols` and
@@ -329,6 +382,8 @@ If the command completes but writes no Parquet files, check:
 | Command | Description |
 |---------|-------------|
 | `fintech-init-project` | Bootstrap a local workspace |
+| `fintech-save-session` | Save selected session files to a persistence target |
+| `fintech-restore-session` | Restore selected files from a persistence target |
 | `fintech-backfill-daily` | Backfill daily OHLCV bars |
 | `fintech-backfill-1m` | Backfill 1-minute OHLCV bars |
 | `fintech-ingest-corporate-actions` | Ingest dividend / corporate-action events |
