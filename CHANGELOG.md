@@ -5,6 +5,43 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.10.0] - Archive Backup Packs and Colab Restore Workflow - 2026-05-26
+
+### Added
+
+- **M10: Archive Backup Packs and Colab Restore Workflow**
+  - deterministic archive backup pack manifest contract
+  - sharded ZIP backup pack writer with dry-run planning
+  - local restore workflow with staged extraction and explicit overwrite
+    policies
+  - read-only backup pack validation and inspection APIs
+  - `fintech-backup-data` CLI commands for pack, restore, validate, and inspect
+    workflows
+  - Colab restore-to-local-first workflow documentation
+  - deterministic round-trip validation for archive backup packs
+
+### Preserved Boundary
+
+- Local partitioned Parquet remains canonical working data after restore.
+- Archive backup packs are derived, non-canonical transfer artifacts.
+- Mounted Google Drive is treated as ordinary filesystem archival storage.
+- Package code does not use Google Drive APIs, OAuth, credentials, network
+  access, background sync, remote metadata services, or object-store
+  abstractions.
+
+### Validation
+
+- Focused M10 Ruff, pytest, and repository hygiene checks passing in release
+  validation.
+- Full `pytest tests -q` passing with 419 tests.
+- `python -m build` produced
+  `fintech_market_ingestion-0.10.0.tar.gz` and
+  `fintech_market_ingestion-0.10.0-py3-none-any.whl`.
+- `python scripts/validate.py` requires an editable-installed release
+  environment with console scripts available; the local Codex interpreter used
+  for this validation could not find `fintech-ingest-corporate-actions`.
+- M10 validation commands are documented in `docs/m10_release_readiness.md`.
+
 ## [0.9.0] - Portable Project Sessions and Google Drive Persistence - 2026-05-25
 
 ### Added

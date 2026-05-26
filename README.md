@@ -6,18 +6,18 @@ For **pip-install and notebook usage**, see [docs/notebook_pip_install_guide.md]
 
 ---
 
-## Release 0.9.0 Highlights
+## Release 0.10.0 Highlights
 
-Version `0.9.0` finalizes M9 portable project sessions and mounted-path persistence while preserving local workspace canonicality.
+Version `0.10.0` finalizes M10 archive backup packs and Colab restore workflows while preserving local Parquet canonicality.
 
-* Deterministic project-session manifests with opt-in session-aware bootstrap.
-* Local and mounted-path Google Drive persistence adapters as explicit transport utilities.
-* Deterministic save plans and save/restore manifests with dry-run-friendly workflows.
-* Explicit `fintech-save-session` and `fintech-restore-session` commands with conservative restore overwrite behavior.
-* Named save policies with curated-data and 1-minute-data guardrails.
-* CI-safe notebook-style quickstart and focused M9 release-readiness checklist.
+* Deterministic archive backup pack manifest contract for local partitioned Parquet inventories.
+* Sharded ZIP backup pack writer with dry-run planning and stable archive/member ordering.
+* Local restore workflow with staged extraction and explicit `fail`, `replace`, and `merge` overwrite policies.
+* Read-only validation and inspection APIs for notebook-friendly pack checks.
+* `fintech-backup-data` CLI commands for pack, restore, validate, and inspect workflows.
+* Colab restore-to-local-first documentation and deterministic round-trip validation.
 
-Boundary preserved: project sessions make notebook and cloud workflows easier to resume, persist, and export without making Drive copies, notebooks, or backups canonical sources of truth.
+Boundary preserved: local partitioned Parquet remains canonical working data, archive backup packs are derived/non-canonical transfer artifacts, and mounted Google Drive is treated only as ordinary filesystem archival storage.
 
 ---
 

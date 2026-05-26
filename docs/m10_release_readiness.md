@@ -133,6 +133,33 @@ roots, and they should not imply that backup packs are canonical datasets.
 - Generated artifacts, `.pytest_tmp*`, build outputs, and credentials are not
   committed.
 
+## Release Identity
+
+- Canonical package version: `0.10.0`.
+- Release tag:
+  `v0.10.0-archive-backup-packs-colab-restore`.
+- Release title:
+  `v0.10.0 - Archive Backup Packs and Colab Restore Workflow`.
+- Release branch:
+  `release/m10-archive-backup-packs-colab-restore`.
+- Completed issue set: #72, #73, #74, #75, #76, #77, #78, #79, #81, and #82.
+
+## Final M10 Release Snapshot
+
+- Focused M10 validation: passing on the release branch.
+- Full regression validation: `pytest tests -q` passing with 419 tests.
+- Package build validation: `python -m build --outdir
+  .pytest_cache/issue82_build_dist` produced wheel and sdist artifacts for
+  version `0.10.0`.
+- Repository hygiene: passing.
+- Local validation wrapper note: `python scripts/validate.py` requires an
+  editable-installed interpreter with console scripts available. In the local
+  Codex validation interpreter, it stopped before running checks because
+  `fintech-ingest-corporate-actions` was unavailable.
+- Boundary preserved: archive backup packs remain derived/non-canonical,
+  restored local Parquet remains canonical working data, and mounted Google
+  Drive remains ordinary filesystem archival storage.
+
 ## Non-Goals Preserved
 
 M10 does not add:
