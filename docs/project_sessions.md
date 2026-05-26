@@ -105,10 +105,12 @@ file-only entries, and serializes deterministic JSON with sorted entries and
 stable formatting. An empty include list produces an empty plan; no files are
 selected by default.
 
-This foundation is local and CI-safe. It does not implement Google Drive,
-save/restore CLI behavior, session restore, background sync, remote metadata,
-or a canonical artifact registry. Persisted copies remain transport artifacts,
-not the source of truth.
+This foundation is local and CI-safe. It now underpins explicit save/restore
+CLI workflows and a Google Drive mounted-path adapter, while remaining a
+transport utility only. It does not call Google Drive APIs, authenticate,
+mount Drive, run background sync, manage remote metadata, or provide a
+canonical artifact registry. Persisted copies remain transport artifacts, not
+the source of truth.
 
 ## Google Drive Mounted-Path Adapter
 

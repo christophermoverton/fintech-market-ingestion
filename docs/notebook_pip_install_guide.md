@@ -65,8 +65,10 @@ It does not copy curated data, run save/restore behavior, execute persistence
 adapters, require Google Drive, or require Google credentials. The local
 workspace remains the primary runtime view. Re-running `--with-session` creates
 a new timestamped session manifest by default, and existing session manifests
-are not overwritten. Session reuse and restore behavior are deferred to later
-project-session work.
+are not overwritten. Automatic session reuse/restore within
+`fintech-init-project --with-session` is deferred to later project-session
+work; explicit `fintech-save-session` and `fintech-restore-session` commands
+are available separately.
 
 For mounted-path Google Drive persistence boundaries, see
 [google_drive_persistence.md](google_drive_persistence.md). The adapter expects
