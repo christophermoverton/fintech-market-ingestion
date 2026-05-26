@@ -104,8 +104,8 @@ def _run_pack(args: argparse.Namespace) -> int:
 
 def _run_restore(args: argparse.Namespace) -> int:
     result = restore_backup_pack(
-        backup_pack_dir=args.backup_pack_dir,
-        restore_root=args.restore_root,
+        backup_pack_dir=Path(args.backup_pack_dir).expanduser().resolve(strict=False),
+        restore_root=Path(args.restore_root).expanduser().resolve(strict=False),
         overwrite_policy=args.overwrite_policy,
     )
     print("Archive backup restore:")
