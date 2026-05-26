@@ -195,6 +195,56 @@ Google Drive APIs, infer remote state, or mutate canonical local datasets.
 
 CLI commands are separate M10 follow-up work.
 
+## CLI Wrappers
+
+The `backup_data` CLI is a thin shell-friendly wrapper over the Python APIs.
+It treats mounted Google Drive paths as ordinary filesystem paths and does not
+use Google Drive APIs, credentials, network access, or background sync.
+
+Create a pack:
+
+```bash
+python -m src.cli.backup_data pack \
+  --workspace-root . \
+  --source-dataset-root data/curated \
+  --backup-root artifacts/archive_backups \
+  --backup-id backup_example \
+  --shard-size-mb 512
+```
+
+Preview pack creation without writing a pack directory:
+
+```bash
+python -m src.cli.backup_data pack \
+  --workspace-root . \
+  --source-dataset-root data/curated \
+  --backup-root artifacts/archive_backups \
+  --dry-run
+```
+
+Restore a pack into the active local dataset root:
+
+```bash
+python -m src.cli.backup_data restore \
+  --backup-pack-dir artifacts/archive_backups/backup_example \
+  --restore-root data/curated \
+  --overwrite-policy fail
+```
+
+Validate and inspect a pack:
+
+```bash
+python -m src.cli.backup_data validate \
+  --backup-pack-dir artifacts/archive_backups/backup_example
+
+python -m src.cli.backup_data inspect \
+  --backup-pack-dir artifacts/archive_backups/backup_example
+```
+
+The CLI prints concise notebook-friendly summaries and returns nonzero for
+expected pack, validation, or restore failures. It does not add behavior that
+is unavailable through the Python APIs.
+
 ## File Inventory Entries
 
 Each `files[]` entry describes one source Parquet file without reading Parquet
