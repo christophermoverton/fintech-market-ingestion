@@ -1,0 +1,72 @@
+{
+  "artifact_type": "archive_backup_pack",
+  "backup_id": "backup_20260526_120000_data_curated",
+  "canonical_status": "derived_non_canonical",
+  "checksum_algorithm": "sha256",
+  "created_at_utc": "2026-05-26T12:00:00Z",
+  "file_count": 2,
+  "files": [
+    {
+      "checksum": "1111111111111111111111111111111111111111111111111111111111111111",
+      "checksum_algorithm": "sha256",
+      "dataset_name": "bars_daily",
+      "partitions": {
+        "date": "2026-05-22",
+        "symbol": "AAPL"
+      },
+      "relative_path": "bars_daily/symbol=AAPL/date=2026-05-22/part-000.parquet",
+      "size_bytes": 12
+    },
+    {
+      "checksum": "2222222222222222222222222222222222222222222222222222222222222222",
+      "checksum_algorithm": "sha256",
+      "dataset_name": "bars_1m",
+      "partitions": {
+        "date": "2026-05-22",
+        "symbol": "MSFT"
+      },
+      "relative_path": "bars_1m/symbol=MSFT/date=2026-05-22/part-000.parquet",
+      "size_bytes": 34
+    }
+  ],
+  "included_datasets": [
+    "bars_1m",
+    "bars_daily"
+  ],
+  "metadata": {
+    "example": true,
+    "issue": "72"
+  },
+  "notes": [
+    "Example fixture only; archive backup packs are derived transfer artifacts."
+  ],
+  "restore": {
+    "compatibility_schema_version": 1,
+    "expected_layout": "restore files under the recorded source_dataset_root",
+    "overwrite_policy_options": [
+      "fail",
+      "replace",
+      "merge"
+    ],
+    "paths_are_relative": true,
+    "source_root_semantics": "workspace_relative"
+  },
+  "schema_version": 1,
+  "shard_size_mb": 512,
+  "shard_strategy": "size_limited_tar_zstd",
+  "shards": [
+    {
+      "archive_bytes": 40,
+      "checksum": "3333333333333333333333333333333333333333333333333333333333333333",
+      "checksum_algorithm": "sha256",
+      "file_count": 2,
+      "relative_path": "shards/archive-pack-000.tar.zst",
+      "shard_index": 0,
+      "shard_name": "archive-pack-000.tar.zst",
+      "uncompressed_bytes": 46
+    }
+  ],
+  "source_dataset_root": "data/curated",
+  "total_archive_bytes": 40,
+  "total_uncompressed_bytes": 46
+}
