@@ -80,9 +80,9 @@ def build_parser() -> argparse.ArgumentParser:
 
 def _run_pack(args: argparse.Namespace) -> int:
     result = create_backup_pack(
-        workspace_root=args.workspace_root,
-        source_dataset_root=args.source_dataset_root,
-        backup_root=args.backup_root,
+        workspace_root=Path(args.workspace_root).expanduser().resolve(strict=False),
+        source_dataset_root=Path(args.source_dataset_root).expanduser().resolve(strict=False),
+        backup_root=Path(args.backup_root).expanduser().resolve(strict=False),
         backup_id=args.backup_id,
         created_at_utc=args.created_at_utc,
         shard_size_mb=args.shard_size_mb,
