@@ -5,7 +5,14 @@ from pathlib import Path
 
 import pytest
 
-from src.sessions import SavePlanEntry, build_save_plan, dumps_save_plan_json
+from src.sessions import (
+    POLICY_ARTIFACTS_AND_REPORTS,
+    POLICY_CURATED_1M_BARS,
+    SavePlanEntry,
+    build_save_plan,
+    dumps_save_plan_json,
+    resolve_save_policy,
+)
 
 
 def test_empty_include_list_returns_empty_explicit_plan(tmp_path: Path) -> None:
@@ -129,6 +136,56 @@ def test_curated_data_can_be_explicitly_included_when_not_excluded(tmp_path: Pat
     plan = build_save_plan(tmp_path, include=("data/curated",), exclude=())
 
     assert [entry.source_path for entry in plan.entries] == ["data/curated/bars.parquet"]
+
+
+def test_policy_resolved_includes_feed_build_save_plan(tmp_path: Path) -> None:
+    _write_text(tmp_path / "configs" / "tickers.txt", "AAPL\n")
+    _write_text(tmp_path / "artifacts" / "run.json", "{}")
+    _write_text(tmp_path / "reports" / "summary.txt", "summary")
+    _write_text(tmp_path / "data" / "curated" / "bars.parquet", "curated")
+    policy = resolve_save_policy(POLICY_ARTIFACTS_AND_REPORTS)
+
+    plan = build_save_plan(tmp_path, include=policy.include, exclude=policy.exclude)
+
+    assert [entry.source_path for entry in plan.entries] == [
+        "artifacts/run.json",
+        "configs/tickers.txt",
+        "reports/summary.txt",
+    ]
+    assert plan.summary.file_count == 3
+    assert plan.summary.total_size_bytes == sum(
+        (tmp_path / path).stat().st_size
+        for path in ["artifacts/run.json", "configs/tickers.txt", "reports/summary.txt"]
+    )
+
+
+def test_policy_guardrails_exclude_1m_data_without_opt_in(tmp_path: Path) -> None:
+    _write_text(tmp_path / "data" / "curated" / "bars_daily" / "daily.parquet", "daily")
+    _write_text(tmp_path / "data" / "curated" / "bars_1m" / "minute.parquet", "minute")
+    policy = resolve_save_policy(
+        "all_selected",
+        include_curated_data=True,
+        extra_include=("data/curated",),
+    )
+
+    plan = build_save_plan(tmp_path, include=policy.include, exclude=policy.exclude)
+
+    assert [entry.source_path for entry in plan.entries] == [
+        "data/curated/bars_daily/daily.parquet"
+    ]
+
+
+def test_1m_policy_allows_1m_data_with_explicit_flags(tmp_path: Path) -> None:
+    _write_text(tmp_path / "data" / "curated" / "bars_1m" / "minute.parquet", "minute")
+    policy = resolve_save_policy(
+        POLICY_CURATED_1M_BARS,
+        include_curated_data=True,
+        include_1m_data=True,
+    )
+
+    plan = build_save_plan(tmp_path, include=policy.include, exclude=policy.exclude)
+
+    assert [entry.source_path for entry in plan.entries] == ["data/curated/bars_1m/minute.parquet"]
 
 
 def _write_text(path: Path, text: str) -> Path:

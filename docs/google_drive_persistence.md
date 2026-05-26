@@ -69,6 +69,23 @@ The commands still do not mount Drive, authenticate, use Google APIs, or run
 background sync. Restore refuses to overwrite local files unless `--force` is
 passed.
 
+For Drive targets, start with conservative policies such as `metadata_only` or
+`artifacts_and_reports`:
+
+```bash
+fintech-save-session \
+  --root . \
+  --session-id <session_id> \
+  --policy artifacts_and_reports \
+  --adapter google-drive \
+  --destination "/content/drive/MyDrive/fintech-market-ingestion/<session_name>" \
+  --dry-run
+```
+
+Curated 1-minute bars can be large and require both `--include-curated-data` and
+`--include-1m-data`. Persisted Drive copies remain export/restore surfaces, not
+canonical data.
+
 Curated data should remain opt-in in later save policies. Drive copies are
 export/restore aids, not the source of truth for curated data, research outputs,
 QA artifacts, reports, or session manifests.

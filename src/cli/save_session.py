@@ -9,8 +9,10 @@ from pathlib import Path
 from src.persistence import GoogleDrivePersistenceAdapter, LocalPersistenceAdapter
 from src.sessions import (
     build_save_manifest,
-    build_session_save_plan,
+    build_save_plan,
     copy_save_plan_files,
+    list_save_policies,
+    resolve_save_policy,
     session_manifest_path,
     utc_now_string,
     write_save_manifest,
@@ -44,10 +46,22 @@ def main(argv: list[str] | None = None) -> int:
         help="Workspace-relative files or directories to exclude.",
     )
     parser.add_argument(
+        "--policy",
+        choices=list_save_policies(),
+        default="all_selected",
+        help="Named save policy to apply before extra --include paths.",
+    )
+    parser.add_argument(
         "--include-curated-data",
         action="store_true",
         default=False,
         help="Allow data/curated to be selected when explicitly included.",
+    )
+    parser.add_argument(
+        "--include-1m-data",
+        action="store_true",
+        default=False,
+        help="Allow known curated 1-minute data paths to be selected.",
     )
     parser.add_argument(
         "--create-destination",
@@ -64,20 +78,29 @@ def main(argv: list[str] | None = None) -> int:
         print(f"Session manifest does not exist: {session_manifest}", file=sys.stderr)
         return 1
 
-    include = tuple(args.include or ())
-    if not include and not args.dry_run:
-        print("At least one --include path is required unless --dry-run is used.", file=sys.stderr)
+    extra_include = tuple(args.include or ())
+    if args.policy == "all_selected" and not extra_include and not args.dry_run:
+        print(
+            "At least one --include path or a non-all_selected --policy is required unless --dry-run is used.",
+            file=sys.stderr,
+        )
         return 1
     if not args.destination and not args.dry_run:
         print("--destination is required unless --dry-run is used.", file=sys.stderr)
         return 1
 
     try:
-        plan = build_session_save_plan(
-            root,
-            include=include,
-            exclude=args.exclude,
+        resolved_policy = resolve_save_policy(
+            args.policy,
             include_curated_data=args.include_curated_data,
+            include_1m_data=args.include_1m_data,
+            extra_include=extra_include,
+            extra_exclude=args.exclude,
+        )
+        plan = build_save_plan(
+            root,
+            include=resolved_policy.include,
+            exclude=resolved_policy.exclude,
         )
         created_at = utc_now_string()
         adapter = None
@@ -93,6 +116,8 @@ def main(argv: list[str] | None = None) -> int:
                 destination=args.destination,
                 plan=plan,
                 include_curated_data=args.include_curated_data,
+                include_1m_data=args.include_1m_data,
+                save_policy=resolved_policy,
                 dry_run=False,
                 files=files,
             )
@@ -106,6 +131,9 @@ def main(argv: list[str] | None = None) -> int:
     print(f"  adapter: {args.adapter}")
     print(f"  destination: {args.destination or '(dry-run only)'}")
     print(f"  dry_run: {args.dry_run}")
+    print(f"  policy: {resolved_policy.name}")
+    print(f"  include_curated_data: {resolved_policy.include_curated_data}")
+    print(f"  include_1m_data: {resolved_policy.include_1m_data}")
     print(f"  include: {', '.join(plan.include) if plan.include else '(none)'}")
     print(f"  exclude: {', '.join(plan.exclude) if plan.exclude else '(none)'}")
     print(f"  file_count: {plan.summary.file_count}")

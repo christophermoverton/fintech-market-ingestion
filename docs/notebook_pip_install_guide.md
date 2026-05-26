@@ -77,9 +77,9 @@ Explicit save/restore commands are available once you have a session ID:
 fintech-save-session \
   --root . \
   --session-id <session_id> \
+  --policy artifacts_and_reports \
   --adapter local \
   --destination artifacts/session_exports/<session_id> \
-  --include configs artifacts reports
 
 fintech-restore-session \
   --root . \
@@ -89,7 +89,8 @@ fintech-restore-session \
 ```
 
 Restore does not overwrite existing files unless `--force` is passed. Curated
-data is excluded from saves by default.
+data is excluded from saves by default. Use `--dry-run` before saving to a
+mounted Drive path, especially before any curated-data policy.
 
 **These files are local and user-owned.** They are not part of the installed
 package and will not be overwritten on package updates. Some backfill CLIs use

@@ -10,6 +10,11 @@ from typing import Any, Sequence
 
 from src.persistence.base import PersistedFile, PersistenceAdapter
 from src.sessions.save_plan import SavePlan, build_save_plan
+from src.sessions.save_policy import (
+    POLICY_ALL_SELECTED,
+    ResolvedSavePolicy,
+    resolve_save_policy,
+)
 from src.sessions.session_paths import (
     ROOT_SEMANTICS_WORKSPACE_RELATIVE,
     normalize_workspace_relative_path,
@@ -71,11 +76,20 @@ def build_session_save_plan(
     *,
     exclude: Sequence[str] | None = None,
     include_curated_data: bool = False,
+    include_1m_data: bool = False,
+    policy_name: str = POLICY_ALL_SELECTED,
 ) -> SavePlan:
+    resolved_policy = resolve_save_policy(
+        policy_name,
+        include_curated_data=include_curated_data,
+        include_1m_data=include_1m_data,
+        extra_include=include,
+        extra_exclude=exclude,
+    )
     return build_save_plan(
         workspace_root,
-        include=include,
-        exclude=default_save_exclude(include_curated_data, exclude),
+        include=resolved_policy.include,
+        exclude=resolved_policy.exclude,
     )
 
 
@@ -103,10 +117,24 @@ def build_save_manifest(
     plan: SavePlan,
     include_curated_data: bool,
     dry_run: bool,
+    include_1m_data: bool = False,
+    save_policy: ResolvedSavePolicy | None = None,
     files: Sequence[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     manifest_files = list(files) if files is not None else _planned_save_files(plan)
     copied_file_count = sum(1 for item in manifest_files if item.get("status") == "copied")
+    policy_metadata = (
+        save_policy.to_dict()
+        if save_policy is not None
+        else {
+            "name": POLICY_ALL_SELECTED,
+            "include_curated_data": include_curated_data,
+            "include_1m_data": include_1m_data,
+            "resolved_include": list(plan.include),
+            "resolved_exclude": list(plan.exclude),
+            "safety_warnings": [],
+        }
+    )
     return {
         "schema_version": SESSION_TRANSFER_SCHEMA_VERSION,
         "operation": "save",
@@ -118,6 +146,8 @@ def build_save_manifest(
         "include": list(plan.include),
         "exclude": list(plan.exclude),
         "include_curated_data": include_curated_data,
+        "include_1m_data": include_1m_data,
+        "save_policy": policy_metadata,
         "dry_run": dry_run,
         "copied_file_count": copied_file_count,
         "total_size_bytes": plan.summary.total_size_bytes,

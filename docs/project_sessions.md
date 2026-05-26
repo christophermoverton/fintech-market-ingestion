@@ -179,3 +179,28 @@ copies remain transport artifacts, not canonical data.
 Restore manifests distinguish normal restores from forced overwrites using
 `restored` and `restored_overwrite` file statuses, with
 `overwritten_file_count` reporting forced replacements.
+
+## Save Policies
+
+M9.6 adds named save policies for explicit session persistence:
+
+| Policy | Intent |
+| --- | --- |
+| `metadata_only` | Save lightweight session metadata and configs only. |
+| `artifacts_and_reports` | Save `artifacts/`, `reports/`, and `configs/` while excluding curated data. |
+| `research_outputs` | Save `data/research/` plus artifacts, reports, and configs while excluding curated data. |
+| `corporate_actions` | Save curated corporate-action outputs without broadly selecting OHLCV bars. Requires `--include-curated-data`. |
+| `curated_daily_bars` | Save curated daily bars only. Requires `--include-curated-data`. |
+| `curated_1m_bars` | Save curated 1-minute bars only. Requires both `--include-curated-data` and `--include-1m-data`. |
+| `all_selected` | Honor explicit `--include` paths with curated and 1-minute guardrails. |
+
+`fintech-save-session` defaults to `all_selected`, preserving explicit include
+behavior. A policy can be combined with extra `--include` paths, and resolved
+include/exclude roots are printed by the CLI and recorded in
+`session_save_manifest.json`.
+
+Curated data remains excluded by default. `--include-curated-data` is required
+before curated paths can be saved. Known curated 1-minute paths such as
+`data/curated/bars_1m` require the additional `--include-1m-data` flag because
+these datasets can be large. Run `--dry-run` before saving large datasets to
+inspect selected roots, file count, and total bytes.
