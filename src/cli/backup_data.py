@@ -119,7 +119,7 @@ def _run_restore(args: argparse.Namespace) -> int:
 
 def _run_validate(args: argparse.Namespace) -> int:
     result = validate_backup_pack(
-        args.backup_pack_dir,
+        Path(args.backup_pack_dir).expanduser().resolve(strict=False),
         raise_on_error=args.raise_on_error,
     )
     print("Archive backup validation:")
