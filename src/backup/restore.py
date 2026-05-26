@@ -250,7 +250,10 @@ def _extract_candidates_to_staging(
             for candidate in sorted(by_shard[shard_path], key=lambda item: item.relative_path):
                 staged_path = _safe_restore_target(staging_root, candidate.relative_path)
                 staged_path.parent.mkdir(parents=True, exist_ok=True)
-                with archive.open(candidate.zip_member_name) as source, staged_path.open("wb") as dest:
+                with (
+                    archive.open(candidate.zip_member_name) as source,
+                    staged_path.open("wb") as dest,
+                ):
                     for chunk in iter(lambda: source.read(1024 * 1024), b""):
                         dest.write(chunk)
 
