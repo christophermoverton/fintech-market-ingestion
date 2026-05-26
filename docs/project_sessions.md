@@ -85,10 +85,12 @@ deferred to later M9 save/restore work.
 
 ## Current Deferrals
 
-This contract layer does not yet implement Google Drive mount handling,
-save/restore commands, background sync, or expanded curated-data policy
-enforcement. Those behaviors belong to later M9 issues and should build on this
-manifest contract without changing ingestion or backfill semantics.
+This contract layer still defers Google Drive mount handling, background sync,
+and broader data lifecycle or retention policy enforcement. Future behavior
+should build on the manifest contract, mounted-path adapters, explicit
+save/restore commands, and current curated-data guardrails without changing
+ingestion or backfill semantics. Persisted copies remain transport or export
+artifacts, not canonical data.
 
 ## Local Persistence Foundation
 
