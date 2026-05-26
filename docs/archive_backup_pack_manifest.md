@@ -193,7 +193,9 @@ deterministic.
 These APIs do not create directories, extract archives, repair metadata, contact
 Google Drive APIs, infer remote state, or mutate canonical local datasets.
 
-CLI commands are separate M10 follow-up work.
+For the notebook-oriented Colab workflow that uses these APIs and CLI wrappers
+with mounted Google Drive as archival storage, see
+[colab_archive_backup_restore.md](colab_archive_backup_restore.md).
 
 ## CLI Wrappers
 
