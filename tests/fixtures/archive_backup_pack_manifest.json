@@ -44,8 +44,9 @@
     "compatibility_schema_version": 1,
     "expected_layout": "restore files under the recorded source_dataset_root",
     "overwrite_policy_options": [
-      "fail_if_exists",
-      "overwrite"
+      "fail",
+      "replace",
+      "merge"
     ],
     "paths_are_relative": true,
     "source_root_semantics": "workspace_relative"
