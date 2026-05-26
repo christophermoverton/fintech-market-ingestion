@@ -305,7 +305,7 @@ Required fields:
 | --- | --- |
 | `expected_layout` | Human-readable restore layout description. |
 | `paths_are_relative` | Must be `true`. |
-| `overwrite_policy_options` | Expected later options, currently `fail_if_exists` and `overwrite`. |
+| `overwrite_policy_options` | Expected options, currently `fail`, `replace`, and `merge`. |
 | `compatibility_schema_version` | Manifest schema version compatible with restore. |
 | `source_root_semantics` | Must be `workspace_relative`. |
 
