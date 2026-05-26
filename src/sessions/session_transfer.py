@@ -155,8 +155,9 @@ def build_save_manifest(
     }
 
 
-def write_save_manifest(adapter: Any, manifest: dict[str, Any]) -> Path:
-    path = _adapter_root(adapter) / SAVE_MANIFEST_FILENAME
+def write_save_manifest(destination_root: Path | str, manifest: dict[str, Any]) -> Path:
+    path = Path(destination_root) / SAVE_MANIFEST_FILENAME
+    path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(dumps_transfer_manifest_json(manifest), encoding="utf-8")
     return path
 
@@ -275,13 +276,6 @@ def _planned_save_files(plan: SavePlan) -> list[dict[str, Any]]:
         row["status"] = "planned"
         files.append(row)
     return files
-
-
-def _adapter_root(adapter: Any) -> Path:
-    root = getattr(adapter, "root", None)
-    if root is None:
-        raise ValueError("Persistence adapter does not expose a root path for manifest writing")
-    return Path(root)
 
 
 def _normalize_paths(paths: Sequence[str], field_name: str) -> tuple[str, ...]:

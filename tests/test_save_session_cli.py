@@ -5,8 +5,10 @@ from pathlib import Path
 
 from src.cli.save_session import main
 from src.sessions import (
+    SAVE_MANIFEST_FILENAME,
     create_project_session_manifest,
     write_project_session_manifest_for_workspace,
+    write_save_manifest,
 )
 
 
@@ -27,6 +29,19 @@ def test_save_session_main_missing_session_manifest_fails(tmp_path: Path, capsys
     captured = capsys.readouterr()
     assert rc == 1
     assert "Session manifest does not exist" in captured.err
+
+
+def test_write_save_manifest_uses_explicit_destination_root(tmp_path: Path) -> None:
+    manifest = {
+        "schema_version": 1,
+        "operation": "save",
+        "files": [],
+    }
+
+    path = write_save_manifest(tmp_path, manifest)
+
+    assert path == tmp_path / SAVE_MANIFEST_FILENAME
+    assert path.exists()
 
 
 def test_save_session_dry_run_builds_plan_and_copies_no_files(tmp_path: Path, capsys) -> None:

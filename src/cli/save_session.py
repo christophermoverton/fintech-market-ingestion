@@ -121,7 +121,7 @@ def main(argv: list[str] | None = None) -> int:
                 dry_run=False,
                 files=files,
             )
-            manifest_path = write_save_manifest(adapter, manifest)
+            manifest_path = write_save_manifest(args.destination, manifest)
     except (FileNotFoundError, ValueError) as exc:
         print(str(exc), file=sys.stderr)
         return 1
