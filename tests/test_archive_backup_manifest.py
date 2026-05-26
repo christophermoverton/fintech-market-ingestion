@@ -180,3 +180,21 @@ def test_reported_file_count_and_bytes_must_match_entries() -> None:
 
     with pytest.raises(BackupPackValidationError, match="total_uncompressed_bytes must match"):
         validate_manifest_contract(data)
+
+
+def test_metadata_must_be_json_safe() -> None:
+    with pytest.raises(BackupPackValidationError, match="metadata.*JSON-safe"):
+        BackupPackManifest(
+            backup_id="backup_20260526_120000_data_curated",
+            created_at_utc=FIXED_CREATED_AT,
+            source_dataset_root="data/curated",
+            metadata={"bad": object()},
+        )
+
+    with pytest.raises(BackupPackValidationError, match="metadata keys must be strings"):
+        BackupPackManifest(
+            backup_id="backup_20260526_120000_data_curated",
+            created_at_utc=FIXED_CREATED_AT,
+            source_dataset_root="data/curated",
+            metadata={1: "bad"},
+        )

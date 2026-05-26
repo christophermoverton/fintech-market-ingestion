@@ -51,6 +51,60 @@ Optional or reserved fields:
 | `metadata` | Small deterministic object for producer metadata. |
 | `notes` | Human-readable notes. |
 
+## Backup Pack Writer
+
+The Python writer API creates derived archive backup packs from a local
+partitioned Parquet dataset:
+
+```python
+from src.backup import create_backup_pack
+
+result = create_backup_pack(
+    workspace_root=".",
+    source_dataset_root="data/curated",
+    backup_root="artifacts/archive_backups",
+    shard_size_mb=512,
+)
+```
+
+The writer treats `backup_root` as an ordinary filesystem path. That path may be
+local disk, Colab runtime storage, or an already-mounted Google Drive folder.
+The package does not mount Drive, authenticate, call Google APIs, or run any
+background sync.
+
+The default pack layout is:
+
+```text
+<backup_root>/
+  <backup_id>/
+    manifest.json
+    shards/
+      shard-000000.zip
+      shard-000001.zip
+```
+
+ZIP shard paths recorded in the manifest are relative to the backup pack root,
+for example `shards/shard-000000.zip`. Archive members preserve source paths
+relative to `source_dataset_root`, such as
+`bars_daily/symbol=AAPL/date=2026-05-22/part-000.parquet`.
+
+The shard strategy is `size_limited_zip`. Files are sorted by relative path and
+grouped into shards up to `shard_size_mb`. Individual files are never split; if
+a single Parquet file is larger than the configured shard size, it is placed
+alone in its own shard. Shard names are deterministic and zero-padded.
+
+The writer fixes ZIP member timestamps, ordering, permissions metadata, and
+member paths so equivalent inputs produce stable shard bytes in the standard
+library ZIP implementation. Manifest, file, and shard checksum algorithms are
+currently restricted to `sha256`.
+
+Dry-run mode builds the source inventory, planned shard names, planned shard
+entries, and planned manifest without creating the backup directory, writing
+archives, or writing `manifest.json`.
+
+This issue adds writing only. Restore workflows, pack inspection APIs, and CLI
+commands are separate M10 follow-up work.
+
 ## File Inventory Entries
 
 Each `files[]` entry describes one source Parquet file without reading Parquet

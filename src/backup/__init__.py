@@ -18,6 +18,15 @@ from src.backup.manifest import (
     validate_manifest_contract,
     write_manifest,
 )
+from src.backup.writer import (
+    BACKUP_PACK_MANIFEST_FILENAME,
+    BACKUP_PACK_SHARDS_DIR,
+    DEFAULT_SHARD_SIZE_MB,
+    ZIP_COMPRESSION,
+    ZIP_SHARD_STRATEGY,
+    BackupPackWriteResult,
+    create_backup_pack,
+)
 
 __all__ = [
     "ARCHIVE_BACKUP_PACK_ARTIFACT_TYPE",
@@ -29,8 +38,15 @@ __all__ = [
     "BackupPackRestoreMetadata",
     "BackupPackShardEntry",
     "BackupPackValidationError",
+    "BackupPackWriteResult",
+    "BACKUP_PACK_MANIFEST_FILENAME",
+    "BACKUP_PACK_SHARDS_DIR",
+    "DEFAULT_SHARD_SIZE_MB",
+    "ZIP_COMPRESSION",
+    "ZIP_SHARD_STRATEGY",
     "build_archive_backup_pack_manifest",
     "build_file_inventory",
+    "create_backup_pack",
     "dumps_manifest_json",
     "load_manifest",
     "loads_manifest",

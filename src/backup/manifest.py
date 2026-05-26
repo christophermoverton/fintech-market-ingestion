@@ -4,10 +4,11 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 import re
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
-from pathlib import Path, PurePosixPath
+from pathlib import Path, PurePosixPath, PureWindowsPath
 from typing import Any, Mapping, Sequence
 
 from src.sessions.session_paths import normalize_workspace_relative_path, workspace_relative_path
@@ -59,6 +60,7 @@ class BackupPackFileEntry:
             raise BackupPackValidationError(
                 "files[].checksum_algorithm must be a non-empty string or null"
             )
+        _validate_checksum_algorithm(self.checksum_algorithm, "files[].checksum_algorithm")
         object.__setattr__(self, "partitions", _normalize_partition_mapping(self.partitions))
 
     def to_dict(self) -> dict[str, Any]:
@@ -101,6 +103,7 @@ class BackupPackShardEntry:
     def __post_init__(self) -> None:
         if not isinstance(self.shard_name, str) or not self.shard_name:
             raise BackupPackValidationError("shards[].shard_name must be a non-empty string")
+        object.__setattr__(self, "shard_name", _normalize_shard_name(self.shard_name))
         object.__setattr__(
             self,
             "relative_path",
@@ -119,6 +122,7 @@ class BackupPackShardEntry:
             raise BackupPackValidationError(
                 "shards[].checksum_algorithm must be a non-empty string or null"
             )
+        _validate_checksum_algorithm(self.checksum_algorithm, "shards[].checksum_algorithm")
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -263,6 +267,7 @@ class BackupPackManifest:
         object.__setattr__(self, "source_dataset_root", source_dataset_root)
         if not isinstance(self.checksum_algorithm, str) or not self.checksum_algorithm:
             raise BackupPackValidationError("checksum_algorithm must be a non-empty string")
+        _validate_checksum_algorithm(self.checksum_algorithm, "checksum_algorithm")
         if not isinstance(self.shard_strategy, str) or not self.shard_strategy:
             raise BackupPackValidationError("shard_strategy must be a non-empty string")
         if self.shard_size_mb is not None:
@@ -295,7 +300,7 @@ class BackupPackManifest:
             "included_datasets",
             _normalize_included_datasets(self.included_datasets, self.files),
         )
-        object.__setattr__(self, "metadata", _sorted_jsonable(dict(self.metadata)))
+        object.__setattr__(self, "metadata", _json_safe_sorted_mapping(self.metadata, "metadata"))
         object.__setattr__(self, "notes", _normalize_string_tuple(self.notes, "notes"))
 
     @property
@@ -501,6 +506,27 @@ def _normalize_relative_manifest_path(path: Path | str, field_name: str) -> str:
     return normalized
 
 
+def _normalize_shard_name(value: str) -> str:
+    raw = value.strip()
+    if not raw:
+        raise BackupPackValidationError("shards[].shard_name must be a non-empty string")
+    if raw != value:
+        raise BackupPackValidationError("shards[].shard_name must not contain surrounding spaces")
+    if raw.startswith("~"):
+        raise BackupPackValidationError("shards[].shard_name must not be home-relative")
+    windows_path = PureWindowsPath(raw)
+    posix_path = PurePosixPath(raw)
+    if windows_path.drive:
+        raise BackupPackValidationError("shards[].shard_name must not be drive-qualified")
+    if windows_path.is_absolute() or posix_path.is_absolute():
+        raise BackupPackValidationError("shards[].shard_name must not be absolute")
+    if "\\" in raw or "/" in raw:
+        raise BackupPackValidationError("shards[].shard_name must be a filename, not a path")
+    if raw in {".", ".."} or ".." in posix_path.parts:
+        raise BackupPackValidationError("shards[].shard_name must not contain parent traversal")
+    return raw
+
+
 def _infer_dataset_name(relative_path: str, root: Path) -> str:
     parts = PurePosixPath(relative_path).parts
     if len(parts) > 1 and "=" not in parts[0]:
@@ -577,6 +603,11 @@ def _validate_non_negative_int(value: int, field_name: str) -> None:
 def _validate_positive_int(value: int, field_name: str) -> None:
     if not isinstance(value, int) or isinstance(value, bool) or value <= 0:
         raise BackupPackValidationError(f"{field_name} must be a positive integer")
+
+
+def _validate_checksum_algorithm(value: str | None, field_name: str) -> None:
+    if value is not None and value != CHECKSUM_SHA256:
+        raise BackupPackValidationError(f"{field_name} must be '{CHECKSUM_SHA256}'")
 
 
 def _required_file_entries(data: Mapping[str, Any]) -> tuple[BackupPackFileEntry, ...]:
@@ -692,4 +723,36 @@ def _sorted_jsonable(value: Any) -> Any:
         return {key: _sorted_jsonable(value[key]) for key in sorted(value)}
     if isinstance(value, list):
         return [_sorted_jsonable(item) for item in value]
+    if isinstance(value, tuple):
+        return [_sorted_jsonable(item) for item in value]
     return value
+
+
+def _json_safe_sorted_mapping(value: Mapping[str, Any], field_name: str) -> dict[str, Any]:
+    if not isinstance(value, Mapping):
+        raise BackupPackValidationError(f"{field_name} must be an object")
+    _validate_json_safe(value, field_name)
+    sorted_value = _sorted_jsonable(dict(value))
+    return sorted_value
+
+
+def _validate_json_safe(value: Any, field_name: str) -> None:
+    if value is None or isinstance(value, str | bool | int):
+        return
+    if isinstance(value, float):
+        if not math.isfinite(value):
+            raise BackupPackValidationError(f"{field_name} must contain only finite JSON numbers")
+        return
+    if isinstance(value, list | tuple):
+        for index, item in enumerate(value):
+            _validate_json_safe(item, f"{field_name}[{index}]")
+        return
+    if isinstance(value, dict):
+        for key, item in value.items():
+            if not isinstance(key, str):
+                raise BackupPackValidationError(f"{field_name} keys must be strings")
+            _validate_json_safe(item, f"{field_name}.{key}")
+        return
+    raise BackupPackValidationError(
+        f"{field_name} contains a value that is not JSON-safe: {type(value).__name__}"
+    )
