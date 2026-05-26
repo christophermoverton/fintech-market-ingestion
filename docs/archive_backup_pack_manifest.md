@@ -83,6 +83,12 @@ The default pack layout is:
       shard-000001.zip
 ```
 
+`backup_id` is used as the backup pack directory name. It must be one portable
+path segment containing only letters, numbers, `.`, `_`, and `-`; path
+separators, absolute paths, drive-qualified paths, home-relative paths,
+traversal, and surrounding spaces are rejected before any pack directory is
+created.
+
 ZIP shard paths recorded in the manifest are relative to the backup pack root,
 for example `shards/shard-000000.zip`. Archive members preserve source paths
 relative to `source_dataset_root`, such as

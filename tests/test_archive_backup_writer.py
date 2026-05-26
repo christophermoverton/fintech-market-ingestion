@@ -233,6 +233,85 @@ def test_dry_run_returns_planned_manifest_without_writing_archives(tmp_path: Pat
     assert source_checksums(dataset_root) == before
 
 
+@pytest.mark.parametrize(
+    "backup_id",
+    [
+        "",
+        " backup",
+        "backup ",
+        "nested/backup",
+        "nested\\backup",
+        "../backup",
+        ".",
+        "..",
+        "/tmp/backup",
+        "C:/tmp/backup",
+        "~/backup",
+    ],
+)
+def test_unsafe_backup_ids_are_rejected_before_writing(tmp_path: Path, backup_id: str) -> None:
+    dataset_root = small_partitioned_dataset(tmp_path)
+    backup_root = tmp_path / "backups"
+
+    with pytest.raises(BackupPackValidationError, match="backup_id"):
+        create_backup_pack(
+            workspace_root=tmp_path,
+            source_dataset_root=dataset_root,
+            backup_root=backup_root,
+            backup_id=backup_id,
+            created_at_utc=FIXED_CREATED_AT,
+            shard_size_mb=512,
+        )
+
+    assert not backup_root.exists()
+
+
+@pytest.mark.parametrize(
+    "backup_id",
+    [
+        "backup_20260526_130000_data_curated",
+        "backup-single",
+        "backup.single",
+        "backup_001",
+    ],
+)
+def test_safe_backup_ids_create_expected_pack_directory(tmp_path: Path, backup_id: str) -> None:
+    dataset_root = small_partitioned_dataset(tmp_path)
+    backup_root = tmp_path / "backups"
+
+    result = create_backup_pack(
+        workspace_root=tmp_path,
+        source_dataset_root=dataset_root,
+        backup_root=backup_root,
+        backup_id=backup_id,
+        created_at_utc=FIXED_CREATED_AT,
+        shard_size_mb=512,
+    )
+
+    assert result.backup_id == backup_id
+    assert result.backup_pack_dir == backup_root / backup_id
+    assert result.manifest_path == backup_root / backup_id / "manifest.json"
+    assert result.manifest_path.is_file()
+
+
+def test_generated_backup_id_is_validated_and_written_under_backup_root(tmp_path: Path) -> None:
+    dataset_root = small_partitioned_dataset(tmp_path)
+    backup_root = tmp_path / "backups"
+
+    result = create_backup_pack(
+        workspace_root=tmp_path,
+        source_dataset_root=dataset_root,
+        backup_root=backup_root,
+        created_at_utc=FIXED_CREATED_AT,
+        shard_size_mb=512,
+    )
+
+    assert result.backup_id == "backup_20260526_130000_data_curated"
+    assert result.backup_pack_dir == backup_root / result.backup_id
+    assert result.manifest.backup_id == result.backup_id
+    assert result.manifest_path.is_file()
+
+
 def test_source_files_are_not_mutated_by_backup_writer(tmp_path: Path) -> None:
     dataset_root = small_partitioned_dataset(tmp_path)
     before = source_checksums(dataset_root)

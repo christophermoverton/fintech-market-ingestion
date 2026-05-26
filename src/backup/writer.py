@@ -3,10 +3,11 @@
 from __future__ import annotations
 
 import hashlib
+import re
 import zipfile
 from dataclasses import dataclass
 from datetime import datetime
-from pathlib import Path
+from pathlib import Path, PurePosixPath, PureWindowsPath
 from typing import Any, Mapping, Sequence
 
 from src.backup.manifest import (
@@ -29,6 +30,7 @@ DEFAULT_SHARD_SIZE_MB = 512
 ZIP_COMPRESSION = "zip"
 ZIP_SHARD_STRATEGY = "size_limited_zip"
 ZIP_FIXED_TIMESTAMP = (1980, 1, 1, 0, 0, 0)
+_BACKUP_ID_RE = re.compile(r"^[A-Za-z0-9._-]+$")
 
 
 @dataclass(frozen=True)
@@ -69,7 +71,11 @@ def create_backup_pack(
     created_at = normalize_created_at_utc(created_at_utc)
     source_root = _resolve_source_root(workspace_root, source_dataset_root)
     source_root_relative = workspace_relative_path(workspace_root, source_root)
-    resolved_backup_id = backup_id or deterministic_backup_id(source_root_relative, created_at)
+    resolved_backup_id = _normalize_backup_id(
+        deterministic_backup_id(source_root_relative, created_at)
+        if backup_id is None
+        else backup_id
+    )
     backup_pack_dir = Path(backup_root) / resolved_backup_id
     manifest_path = backup_pack_dir / BACKUP_PACK_MANIFEST_FILENAME
     shard_plan = _plan_shards(build_file_inventory(source_root), shard_size_mb)
@@ -172,6 +178,29 @@ def _resolve_source_root(workspace_root: Path | str, source_dataset_root: Path |
     if source_root.is_absolute():
         return source_root
     return Path(workspace_root) / source_root
+
+
+def _normalize_backup_id(value: str) -> str:
+    if not isinstance(value, str) or not value:
+        raise BackupPackValidationError("backup_id must be a non-empty string")
+    raw = value.strip()
+    if raw != value:
+        raise BackupPackValidationError("backup_id must not contain surrounding spaces")
+    if raw.startswith("~"):
+        raise BackupPackValidationError("backup_id must not be home-relative")
+    windows_path = PureWindowsPath(raw)
+    posix_path = PurePosixPath(raw)
+    if windows_path.drive:
+        raise BackupPackValidationError("backup_id must not be drive-qualified")
+    if windows_path.is_absolute() or posix_path.is_absolute():
+        raise BackupPackValidationError("backup_id must not be absolute")
+    if "\\" in raw or "/" in raw:
+        raise BackupPackValidationError("backup_id must not contain path separators")
+    if raw in {".", ".."} or ".." in posix_path.parts:
+        raise BackupPackValidationError("backup_id must not contain parent traversal")
+    if not _BACKUP_ID_RE.match(raw):
+        raise BackupPackValidationError("backup_id contains unsupported characters")
+    return raw
 
 
 def _planned_shard_entries(
