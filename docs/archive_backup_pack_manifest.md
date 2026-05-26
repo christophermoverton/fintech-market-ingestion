@@ -154,7 +154,46 @@ Restore treats mounted Google Drive as a plain filesystem source path. It does
 not mount Drive, authenticate, call Google APIs, make Drive active working
 storage, infer ingestion configuration, or run background sync.
 
-Pack inspection APIs and CLI commands are separate M10 follow-up work.
+## Validation And Inspection
+
+Validation and inspection are read-only notebook-friendly APIs for checking
+archive backup packs before restore:
+
+```python
+from src.backup import inspect_backup_pack, validate_backup_pack
+
+validation = validate_backup_pack("/content/drive/MyDrive/.../<backup_id>")
+inspection = inspect_backup_pack("/content/drive/MyDrive/.../<backup_id>")
+```
+
+`validate_backup_pack(...)` returns a structured result with `is_valid`,
+`errors`, `warnings`, checked shard paths, checked file paths, byte totals, and
+the validated manifest when readable. Expected pack problems are reported as
+actionable errors instead of mutating or repairing the pack. Pass
+`raise_on_error=True` when an exception is preferred.
+
+Validation checks:
+
+- `manifest.json` exists, is readable, and satisfies the manifest contract.
+- The pack is explicitly `derived_non_canonical`.
+- The shard strategy is compatible with local ZIP restore.
+- Expected shard files exist under the backup pack directory.
+- Shard sizes and SHA-256 checksums match recorded metadata when present.
+- ZIP shards are readable.
+- ZIP member paths are safe relative paths.
+- ZIP members are listed in manifest file inventory.
+- Manifest file entries appear exactly once across shards.
+- Member sizes and file checksums match manifest inventory when present.
+
+`inspect_backup_pack(...)` summarizes the manifest without extraction:
+datasets, partition keys, file counts, byte totals, shard summaries, checksum
+presence, restore metadata, and a restore target hint. Inspection ordering is
+deterministic.
+
+These APIs do not create directories, extract archives, repair metadata, contact
+Google Drive APIs, infer remote state, or mutate canonical local datasets.
+
+CLI commands are separate M10 follow-up work.
 
 ## File Inventory Entries
 

@@ -26,6 +26,14 @@ from src.backup.restore import (
     BackupPackRestoreResult,
     restore_backup_pack,
 )
+from src.backup.validation import (
+    BackupPackDatasetSummary,
+    BackupPackInspection,
+    BackupPackShardSummary,
+    BackupPackValidationResult,
+    inspect_backup_pack,
+    validate_backup_pack,
+)
 from src.backup.writer import (
     BACKUP_PACK_MANIFEST_FILENAME,
     BACKUP_PACK_SHARDS_DIR,
@@ -46,8 +54,12 @@ __all__ = [
     "BackupPackRestoreMetadata",
     "BackupPackRestoreResult",
     "BackupPackShardEntry",
+    "BackupPackShardSummary",
     "BackupPackValidationError",
+    "BackupPackValidationResult",
     "BackupPackWriteResult",
+    "BackupPackDatasetSummary",
+    "BackupPackInspection",
     "BACKUP_PACK_MANIFEST_FILENAME",
     "BACKUP_PACK_SHARDS_DIR",
     "DEFAULT_SHARD_SIZE_MB",
@@ -61,9 +73,11 @@ __all__ = [
     "build_file_inventory",
     "create_backup_pack",
     "dumps_manifest_json",
+    "inspect_backup_pack",
     "load_manifest",
     "loads_manifest",
     "restore_backup_pack",
+    "validate_backup_pack",
     "validate_manifest_contract",
     "write_manifest",
 ]
