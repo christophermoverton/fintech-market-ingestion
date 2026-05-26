@@ -272,9 +272,9 @@ Optional fields:
 
 ## Shard Entries
 
-Issue 72 does not create archive shards, but the manifest reserves the shard
-contract so Issue 73 can add sharded archive writing without changing the
-manifest shape.
+Shards record the archive outputs produced by the backup pack writer. In M10, shards are
+written as deterministic ZIP files (for example, `shards/shard-000000.zip`) and are listed in
+`shards[]` so validation and restore can verify and consume them.
 
 Required `shards[]` fields:
 
