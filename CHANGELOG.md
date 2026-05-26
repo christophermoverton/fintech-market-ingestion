@@ -5,6 +5,40 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.0] - Portable Project Sessions and Google Drive Persistence - 2026-05-25
+
+### Added
+
+- **M9: Portable Project Sessions and Google Drive Persistence**
+  - deterministic project-session manifests
+  - opt-in session-aware bootstrap
+  - local persistence adapter
+  - mounted-path Google Drive adapter without Google API/auth/auto-mount behavior
+  - deterministic save plans
+  - explicit save/restore commands
+  - dry-run-friendly save/restore workflows
+  - conservative restore overwrite behavior
+  - named save policies
+  - curated-data and 1-minute-data guardrails
+  - CI-safe notebook-style quickstart
+  - M9 release-readiness checklist
+
+### Preserved Boundary
+
+- Project sessions make notebook and cloud workflows easier to resume, persist,
+  and export without making Google Drive, notebooks, or derived backups
+  canonical sources of truth.
+- Package code does not mount Google Drive, authenticate with Google, call
+  Google APIs, or run background sync.
+- Persistence copies remain transport/export artifacts.
+
+### Validation
+
+- Focused M9 Ruff, pytest, quickstart, and repository hygiene checks passing.
+- Full `pytest tests -q` passing.
+- `python -m build` producing wheel and sdist artifacts.
+- `python scripts/validate.py` passing in the release environment.
+
 ## [0.8.0] - Notebook Ergonomics and Workspace Bootstrap - 2026-05-22
 
 ### Added

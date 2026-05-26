@@ -237,3 +237,16 @@ M9 adds portable project sessions, deterministic session/save/restore manifests,
 local and mounted-path persistence adapters, explicit save/restore commands,
 curated-data guardrails, and a notebook-friendly quickstart while preserving
 local workspace canonicality and avoiding external service dependencies.
+
+## Final M9 Release Snapshot (Issue 70)
+
+- Release intent: finalize M9 documentation and versioning for
+  `v0.9.0-portable-project-sessions-google-drive-persistence`.
+- Canonical package version: `0.9.0`.
+- Focused M9 validation: run and passing on the release branch.
+- Full regression validation: run and passing on the release branch.
+- Packaging validation: `python -m build` produces wheel and sdist artifacts.
+- Repository hygiene: passing.
+- Boundary preserved: persistence remains explicit transport/export behavior,
+  local workspaces remain canonical, and package code does not mount Drive,
+  authenticate, call Google APIs, or run background sync.
