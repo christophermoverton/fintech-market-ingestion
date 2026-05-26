@@ -6,25 +6,18 @@ For **pip-install and notebook usage**, see [docs/notebook_pip_install_guide.md]
 
 ---
 
-## Release 0.8.0 Highlights
+## Release 0.9.0 Highlights
 
-Version `0.8.0` adds notebook-first and pip-install-friendly workflow support for historical bar ingestion.
+Version `0.9.0` finalizes M9 portable project sessions and mounted-path persistence while preserving local workspace canonicality.
 
-* New installed console scripts:
-  * `fintech-backfill-daily`
-  * `fintech-backfill-1m`
-  * `fintech-init-project`
-* New local workspace bootstrap command for pip-installed users:
+* Deterministic project-session manifests with opt-in session-aware bootstrap.
+* Local and mounted-path Google Drive persistence adapters as explicit transport utilities.
+* Deterministic save plans and save/restore manifests with dry-run-friendly workflows.
+* Explicit `fintech-save-session` and `fintech-restore-session` commands with conservative restore overwrite behavior.
+* Named save policies with curated-data and 1-minute-data guardrails.
+* CI-safe notebook-style quickstart and focused M9 release-readiness checklist.
 
-  ```bash
-  fintech-init-project --root .
-  ```
-
-* New notebook guide for local workspace setup, backfill examples, DuckDB spot-checks, and troubleshooting:
-  * [docs/notebook_pip_install_guide.md](docs/notebook_pip_install_guide.md)
-* Existing module entrypoints remain supported:
-  * `python -m src.ingestion.backfill_daily`
-  * `python -m src.ingestion.backfill_1m`
+Boundary preserved: project sessions make notebook and cloud workflows easier to resume, persist, and export without making Drive copies, notebooks, or backups canonical sources of truth.
 
 ---
 
