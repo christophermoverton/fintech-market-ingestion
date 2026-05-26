@@ -108,8 +108,53 @@ Dry-run mode builds the source inventory, planned shard names, planned shard
 entries, and planned manifest without creating the backup directory, writing
 archives, or writing `manifest.json`.
 
-This issue adds writing only. Restore workflows, pack inspection APIs, and CLI
-commands are separate M10 follow-up work.
+## Local Restore Workflow
+
+The Python restore API reads a backup pack from an ordinary filesystem path and
+restores archive members into a local dataset root:
+
+```python
+from src.backup import restore_backup_pack
+
+result = restore_backup_pack(
+    backup_pack_dir="/content/drive/MyDrive/fintech-market-ingestion/backups/<backup_id>",
+    restore_root="/content/fintech-market-ingestion/data/curated",
+    overwrite_policy="fail",
+)
+```
+
+`restore_root` represents the target dataset root. If a shard contains
+`bars_daily/symbol=AAPL/date=2026-05-22/part-000.parquet`, restore writes:
+
+```text
+<restore_root>/bars_daily/symbol=AAPL/date=2026-05-22/part-000.parquet
+```
+
+It does not add another `source_dataset_root` directory layer. The restored
+local Parquet files are the working dataset after restore; the backup pack
+remains a derived, non-canonical transfer artifact.
+
+Before final placement, restore validates `manifest.json`, confirms the pack is
+derived/non-canonical, checks that required ZIP shards exist, verifies shard
+sizes and SHA-256 checksums when recorded, validates ZIP member paths, confirms
+archive members match manifest file inventory, and stages extraction in a
+temporary directory. Unsafe archive member paths, including absolute paths,
+Windows drive-qualified paths, home-relative paths, and parent traversal, are
+rejected.
+
+Overwrite policies:
+
+| Policy | Behavior |
+| --- | --- |
+| `fail` | Default. Any existing target file fails before final writes. |
+| `replace` | Replaces files present in the archive. Unrelated files are left alone. |
+| `merge` | Skips existing files only when their checksum matches the manifest; differing files fail. |
+
+Restore treats mounted Google Drive as a plain filesystem source path. It does
+not mount Drive, authenticate, call Google APIs, make Drive active working
+storage, infer ingestion configuration, or run background sync.
+
+Pack inspection APIs and CLI commands are separate M10 follow-up work.
 
 ## File Inventory Entries
 

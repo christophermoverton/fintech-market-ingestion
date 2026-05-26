@@ -18,6 +18,14 @@ from src.backup.manifest import (
     validate_manifest_contract,
     write_manifest,
 )
+from src.backup.restore import (
+    OVERWRITE_POLICY_FAIL,
+    OVERWRITE_POLICY_MERGE,
+    OVERWRITE_POLICY_REPLACE,
+    SUPPORTED_OVERWRITE_POLICIES,
+    BackupPackRestoreResult,
+    restore_backup_pack,
+)
 from src.backup.writer import (
     BACKUP_PACK_MANIFEST_FILENAME,
     BACKUP_PACK_SHARDS_DIR,
@@ -36,12 +44,17 @@ __all__ = [
     "BackupPackFileEntry",
     "BackupPackManifest",
     "BackupPackRestoreMetadata",
+    "BackupPackRestoreResult",
     "BackupPackShardEntry",
     "BackupPackValidationError",
     "BackupPackWriteResult",
     "BACKUP_PACK_MANIFEST_FILENAME",
     "BACKUP_PACK_SHARDS_DIR",
     "DEFAULT_SHARD_SIZE_MB",
+    "OVERWRITE_POLICY_FAIL",
+    "OVERWRITE_POLICY_MERGE",
+    "OVERWRITE_POLICY_REPLACE",
+    "SUPPORTED_OVERWRITE_POLICIES",
     "ZIP_COMPRESSION",
     "ZIP_SHARD_STRATEGY",
     "build_archive_backup_pack_manifest",
@@ -50,6 +63,7 @@ __all__ = [
     "dumps_manifest_json",
     "load_manifest",
     "loads_manifest",
+    "restore_backup_pack",
     "validate_manifest_contract",
     "write_manifest",
 ]
