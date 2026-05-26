@@ -158,6 +158,36 @@ def test_save_session_excludes_curated_data_by_default(tmp_path: Path) -> None:
     assert (destination / "data" / "research" / "summary.txt").exists()
 
 
+def test_save_session_custom_exclude_preserves_curated_default(tmp_path: Path) -> None:
+    session_id = create_session(tmp_path)
+    _write_text(tmp_path / "data" / "curated" / "bars.parquet", "curated")
+    _write_text(tmp_path / "data" / "research" / "summary.txt", "research")
+    _write_text(tmp_path / "reports" / "summary.txt", "report")
+    destination = tmp_path / "exports" / session_id
+
+    rc = main(
+        [
+            "--root",
+            str(tmp_path),
+            "--session-id",
+            session_id,
+            "--destination",
+            str(destination),
+            "--include",
+            "data",
+            "--exclude",
+            "reports",
+        ]
+    )
+
+    manifest = json.loads((destination / "session_save_manifest.json").read_text(encoding="utf-8"))
+    assert rc == 0
+    assert not (destination / "data" / "curated" / "bars.parquet").exists()
+    assert (destination / "data" / "research" / "summary.txt").exists()
+    assert "data/curated" in manifest["exclude"]
+    assert "reports" in manifest["exclude"]
+
+
 def test_save_session_includes_curated_data_only_with_explicit_flag(tmp_path: Path) -> None:
     session_id = create_session(tmp_path)
     _write_text(tmp_path / "data" / "curated" / "bars.parquet", "curated")

@@ -198,6 +198,8 @@ M9.6 adds named save policies for explicit session persistence:
 behavior. A policy can be combined with extra `--include` paths, and resolved
 include/exclude roots are printed by the CLI and recorded in
 `session_save_manifest.json`.
+User-provided `--exclude` roots are additive and do not remove the default
+curated-data guardrail unless `--include-curated-data` is explicitly provided.
 
 Curated data remains excluded by default. `--include-curated-data` is required
 before curated paths can be saved. Known curated 1-minute paths such as

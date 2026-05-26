@@ -115,7 +115,55 @@ def test_resolved_include_and_exclude_roots_are_deterministic() -> None:
     )
 
     assert policy.include == ("configs", "reports")
-    assert policy.exclude == ("artifacts/tmp", "tmp")
+    assert policy.exclude == ("artifacts/tmp", "data/curated", "tmp")
+
+
+def test_extra_exclude_preserves_default_curated_guardrail() -> None:
+    policy = resolve_save_policy(
+        POLICY_ALL_SELECTED,
+        extra_include=("data",),
+        extra_exclude=("reports",),
+    )
+
+    assert "reports" in policy.exclude
+    assert "data/curated" in policy.exclude
+
+
+def test_extra_exclude_is_additive_with_policy_excludes() -> None:
+    policy = resolve_save_policy(
+        POLICY_ARTIFACTS_AND_REPORTS,
+        extra_exclude=("reports/tmp",),
+    )
+
+    assert "data/curated" in policy.exclude
+    assert "reports/tmp" in policy.exclude
+
+
+def test_extra_exclude_still_applies_when_curated_data_enabled() -> None:
+    policy = resolve_save_policy(
+        POLICY_ALL_SELECTED,
+        include_curated_data=True,
+        extra_include=("data",),
+        extra_exclude=("data/curated/tmp",),
+    )
+
+    assert "data/curated" not in policy.exclude
+    assert "data/curated/tmp" in policy.exclude
+
+
+def test_extra_exclude_preserves_1m_guardrail_when_curated_data_enabled() -> None:
+    policy = resolve_save_policy(
+        POLICY_ALL_SELECTED,
+        include_curated_data=True,
+        extra_include=("data",),
+        extra_exclude=("reports",),
+    )
+
+    assert "reports" in policy.exclude
+    assert "data/curated" not in policy.exclude
+    assert "data/curated/1m" in policy.exclude
+    assert "data/curated/bars_1m" in policy.exclude
+    assert "data/curated/features_1m" in policy.exclude
 
 
 def test_unsafe_policy_extra_paths_are_rejected() -> None:

@@ -139,12 +139,15 @@ def resolve_save_policy(
     if _selects_known_1m_path(include) and not include_1m_data:
         raise ValueError("Known 1-minute curated data paths require --include-1m-data")
 
-    if normalized_extra_exclude is not None:
-        exclude = normalized_extra_exclude
-    elif include_curated_data:
-        exclude = ()
+    if include_curated_data:
+        base_exclude: tuple[str, ...] = ()
     else:
-        exclude = definition.exclude or (DEFAULT_CURATED_EXCLUDE,)
+        base_exclude = definition.exclude or (DEFAULT_CURATED_EXCLUDE,)
+
+    if normalized_extra_exclude is not None:
+        exclude = _sorted_unique((*base_exclude, *normalized_extra_exclude))
+    else:
+        exclude = base_exclude
 
     if include_curated_data and not include_1m_data:
         exclude = _sorted_unique((*exclude, *KNOWN_1M_CURATED_PATHS))
