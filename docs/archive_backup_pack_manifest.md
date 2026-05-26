@@ -11,9 +11,9 @@ Local partitioned Parquet remains canonical. A backup pack is always derived and
 non-canonical. It is a checkpoint and restore aid, not a replacement dataset, a
 remote metadata service, or a new source of truth.
 
-This issue defines only the manifest contract. It does not implement full pack
-creation, restore, background sync, Google Drive API integration, or any change
-to the canonical Parquet layout.
+This document describes the manifest contract and the M10 archive backup pack workflows
+(writer, validation/inspection, and local restore) while preserving the canonical Parquet layout.
+It does not add any Google Drive API integration, authentication, or background sync.
 
 ## Manifest File
 
