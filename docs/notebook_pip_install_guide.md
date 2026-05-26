@@ -75,22 +75,29 @@ Explicit save/restore commands are available once you have a session ID:
 
 ```bash
 fintech-save-session \
-  --root . \
+  --root /content/fintech-market-ingestion-demo \
   --session-id <session_id> \
   --policy artifacts_and_reports \
   --adapter local \
-  --destination artifacts/session_exports/<session_id> \
+  --destination /content/fintech-session-export
 
 fintech-restore-session \
-  --root . \
+  --root /content/fintech-restore-check \
   --adapter local \
-  --source artifacts/session_exports/<session_id> \
+  --source /content/fintech-session-export \
   --dry-run
 ```
 
 Restore does not overwrite existing files unless `--force` is passed. Curated
 data is excluded from saves by default. Use `--dry-run` before saving to a
 mounted Drive path, especially before any curated-data policy.
+
+For a runnable local notebook-style walkthrough that uses only tiny synthetic
+files:
+
+```bash
+python examples/project_session_quickstart.py --output-root artifacts/examples/project_session_quickstart
+```
 
 **These files are local and user-owned.** They are not part of the installed
 package and will not be overwritten on package updates. Some backfill CLIs use

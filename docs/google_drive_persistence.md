@@ -82,6 +82,30 @@ fintech-save-session \
   --dry-run
 ```
 
+In Colab, a typical mounted-path quickstart is:
+
+```python
+from google.colab import drive
+
+drive.mount("/content/drive")
+```
+
+Then preview the export before copying:
+
+```bash
+fintech-save-session \
+  --root /content/fintech-market-ingestion-demo \
+  --session-id <session_id> \
+  --policy artifacts_and_reports \
+  --adapter google-drive \
+  --destination "/content/drive/MyDrive/fintech-market-ingestion/<session_name>" \
+  --dry-run
+```
+
+Remove `--dry-run` only after reviewing the selected policy, include roots,
+exclude roots, file count, and total bytes. The package still does not import
+`google.colab`, mount Drive, authenticate, use Google APIs, or run sync work.
+
 Curated 1-minute bars can be large and require both `--include-curated-data` and
 `--include-1m-data`. Persisted Drive copies remain export/restore surfaces, not
 canonical data.

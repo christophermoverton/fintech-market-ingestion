@@ -204,3 +204,67 @@ before curated paths can be saved. Known curated 1-minute paths such as
 `data/curated/bars_1m` require the additional `--include-1m-data` flag because
 these datasets can be large. Run `--dry-run` before saving large datasets to
 inspect selected roots, file count, and total bytes.
+
+## Notebook / Colab Quickstart
+
+For a CI-safe notebook-style walkthrough that requires no credentials, network
+access, live market data, Colab runtime, or Google Drive mount, run:
+
+```bash
+python examples/project_session_quickstart.py --output-root artifacts/examples/project_session_quickstart
+```
+
+The quickstart writes only under the configured `--output-root`. It initializes
+a workspace with `--with-session`, locates the generated
+`artifacts/sessions/<session_id>/session_manifest.json`, writes tiny synthetic
+files under `configs/`, `reports/`, `artifacts/quickstart/`, and
+`data/research/`, saves locally with `--policy artifacts_and_reports`, and runs
+a restore dry-run into a fresh check root.
+
+The equivalent notebook or Colab shell flow is:
+
+```bash
+fintech-init-project \
+  --root /content/fintech-market-ingestion-demo \
+  --notebooks \
+  --with-session \
+  --session-name colab-demo
+
+fintech-save-session \
+  --root /content/fintech-market-ingestion-demo \
+  --session-id <session_id> \
+  --policy artifacts_and_reports \
+  --adapter local \
+  --destination /content/fintech-session-export
+
+fintech-restore-session \
+  --root /content/fintech-restore-check \
+  --adapter local \
+  --source /content/fintech-session-export \
+  --dry-run
+```
+
+Optional mounted-path Google Drive export should start as a dry-run:
+
+```bash
+python examples/project_session_quickstart.py \
+  --output-root /content/fintech-market-ingestion-demo \
+  --google-drive-root /content/drive/MyDrive/fintech-market-ingestion/demo
+```
+
+Add `--write-google-drive` only when that path is already mounted and you
+intend to copy files. The package does not mount Drive, import `google.colab`,
+authenticate, call Google APIs, or perform background sync.
+
+### Troubleshooting
+
+- Missing Google Drive root: mount Drive in Colab first, or use a local path
+  with explicit create-root behavior where the command supports it.
+- Restore refuses to overwrite files: rerun with `--dry-run` to inspect
+  collisions, then use `--force` only when replacement is intentional.
+- Unexpected large save plan: use `metadata_only` or `artifacts_and_reports`;
+  curated data requires `--include-curated-data`, and 1-minute curated data
+  requires `--include-1m-data`.
+- Missing session ID: inspect
+  `artifacts/sessions/<session_id>/session_manifest.json` under the workspace
+  created by `fintech-init-project --with-session`.
