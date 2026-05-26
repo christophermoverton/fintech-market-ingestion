@@ -255,8 +255,9 @@ def _write_zip_shard(
             info.compress_type = zipfile.ZIP_DEFLATED
             info.create_system = 3
             info.external_attr = 0o600 << 16
-            with source_path.open("rb") as handle:
-                archive.writestr(info, handle.read())
+            with source_path.open("rb") as handle, archive.open(info, mode="w") as dest:
+                for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+                    dest.write(chunk)
 
 
 def _sha256_file(path: Path) -> str:
