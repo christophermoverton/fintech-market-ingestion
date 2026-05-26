@@ -130,6 +130,32 @@ def test_curated_data_excluded_by_default_even_when_parent_is_included(tmp_path:
     assert [entry.source_path for entry in plan.entries] == ["data/research/summary.txt"]
 
 
+def test_excluded_directory_is_not_traversed(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _write_text(tmp_path / "data" / "research" / "summary.txt", "research")
+    curated = tmp_path / "data" / "curated"
+    curated.mkdir(parents=True)
+
+    original_iterdir = Path.iterdir
+
+    def guarded_iterdir(path: Path):
+        if path == curated:
+            raise AssertionError("excluded curated directory should not be traversed")
+        return original_iterdir(path)
+
+    monkeypatch.setattr(Path, "iterdir", guarded_iterdir)
+
+    plan = build_save_plan(
+        tmp_path,
+        include=("data",),
+        exclude=("data/curated",),
+    )
+
+    assert [entry.source_path for entry in plan.entries] == ["data/research/summary.txt"]
+
+
 def test_curated_data_can_be_explicitly_included_when_not_excluded(tmp_path: Path) -> None:
     _write_text(tmp_path / "data" / "curated" / "bars.parquet", "curated")
 
@@ -162,6 +188,35 @@ def test_policy_resolved_includes_feed_build_save_plan(tmp_path: Path) -> None:
 def test_policy_guardrails_exclude_1m_data_without_opt_in(tmp_path: Path) -> None:
     _write_text(tmp_path / "data" / "curated" / "bars_daily" / "daily.parquet", "daily")
     _write_text(tmp_path / "data" / "curated" / "bars_1m" / "minute.parquet", "minute")
+    policy = resolve_save_policy(
+        "all_selected",
+        include_curated_data=True,
+        extra_include=("data/curated",),
+    )
+
+    plan = build_save_plan(tmp_path, include=policy.include, exclude=policy.exclude)
+
+    assert [entry.source_path for entry in plan.entries] == [
+        "data/curated/bars_daily/daily.parquet"
+    ]
+
+
+def test_excluded_1m_directory_is_not_traversed(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _write_text(tmp_path / "data" / "curated" / "bars_daily" / "daily.parquet", "daily")
+    bars_1m = tmp_path / "data" / "curated" / "bars_1m"
+    bars_1m.mkdir(parents=True)
+
+    original_iterdir = Path.iterdir
+
+    def guarded_iterdir(path: Path):
+        if path == bars_1m:
+            raise AssertionError("excluded 1m directory should not be traversed")
+        return original_iterdir(path)
+
+    monkeypatch.setattr(Path, "iterdir", guarded_iterdir)
     policy = resolve_save_policy(
         "all_selected",
         include_curated_data=True,

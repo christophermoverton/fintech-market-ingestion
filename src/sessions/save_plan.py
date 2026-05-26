@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Iterator
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Sequence
@@ -78,6 +79,7 @@ def build_save_plan(
     root = Path(workspace_root).expanduser().resolve(strict=False)
     include_paths = _normalize_paths(include, "include")
     exclude_paths = _normalize_paths(exclude, "exclude")
+    excluded_roots = tuple(root / path for path in exclude_paths)
     if not include_paths:
         return SavePlan(entries=(), include=(), exclude=exclude_paths)
 
@@ -86,12 +88,7 @@ def build_save_plan(
         selected_root = root / include_path
         if not selected_root.exists():
             raise FileNotFoundError(f"Included path does not exist: {include_path}")
-        if selected_root.is_file():
-            candidates = [selected_root]
-        else:
-            candidates = [path for path in selected_root.rglob("*") if path.is_file()]
-
-        for candidate in candidates:
+        for candidate in _iter_selected_files(selected_root, excluded_roots):
             relative_path = candidate.relative_to(root).as_posix()
             normalized_relative = normalize_workspace_relative_path(
                 relative_path,
@@ -107,6 +104,37 @@ def build_save_plan(
 
     entries = tuple(entries_by_source[path] for path in sorted(entries_by_source))
     return SavePlan(entries=entries, include=include_paths, exclude=exclude_paths)
+
+
+def _is_excluded_path(path: Path, excluded_roots: tuple[Path, ...]) -> bool:
+    return any(path == excluded or excluded in path.parents for excluded in excluded_roots)
+
+
+def _iter_selected_files(selected_root: Path, excluded_roots: tuple[Path, ...]) -> Iterator[Path]:
+    if _is_excluded_path(selected_root, excluded_roots):
+        return
+
+    if selected_root.is_file():
+        yield selected_root
+        return
+
+    if not selected_root.is_dir():
+        return
+
+    stack = [selected_root]
+    while stack:
+        current = stack.pop()
+        if _is_excluded_path(current, excluded_roots):
+            continue
+
+        children = sorted(current.iterdir(), key=lambda path: path.as_posix(), reverse=True)
+        for child in children:
+            if _is_excluded_path(child, excluded_roots):
+                continue
+            if child.is_file():
+                yield child
+            elif child.is_dir():
+                stack.append(child)
 
 
 def dumps_save_plan_json(plan: SavePlan) -> str:
