@@ -239,14 +239,20 @@ def _extract_candidates_to_staging(
     candidates: Sequence[_RestoreCandidate],
     skipped: set[str],
 ) -> None:
-    for candidate in sorted(candidates, key=lambda item: item.relative_path):
+    by_shard: dict[Path, list[_RestoreCandidate]] = {}
+    for candidate in candidates:
         if candidate.relative_path in skipped:
             continue
-        staged_path = _safe_restore_target(staging_root, candidate.relative_path)
-        staged_path.parent.mkdir(parents=True, exist_ok=True)
-        with zipfile.ZipFile(candidate.shard_path) as archive:
-            with archive.open(candidate.zip_member_name) as source:
-                staged_path.write_bytes(source.read())
+        by_shard.setdefault(candidate.shard_path, []).append(candidate)
+
+    for shard_path in sorted(by_shard, key=lambda item: str(item)):
+        with zipfile.ZipFile(shard_path) as archive:
+            for candidate in sorted(by_shard[shard_path], key=lambda item: item.relative_path):
+                staged_path = _safe_restore_target(staging_root, candidate.relative_path)
+                staged_path.parent.mkdir(parents=True, exist_ok=True)
+                with archive.open(candidate.zip_member_name) as source, staged_path.open("wb") as dest:
+                    for chunk in iter(lambda: source.read(1024 * 1024), b""):
+                        dest.write(chunk)
 
 
 def _validate_restored_inventory(restore_root: Path, manifest: BackupPackManifest) -> None:
