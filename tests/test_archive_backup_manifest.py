@@ -162,7 +162,9 @@ def test_absolute_paths_are_rejected_in_serialized_manifest_fields() -> None:
             source_dataset_root="/tmp/data/curated",
         )
 
-    with pytest.raises(BackupPackValidationError, match="files\\[\\].relative_path.*drive-qualified"):
+    with pytest.raises(
+        BackupPackValidationError, match="files\\[\\].relative_path.*drive-qualified"
+    ):
         BackupPackFileEntry(relative_path="C:/tmp/data/part.parquet", size_bytes=1)
 
 

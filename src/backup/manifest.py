@@ -48,7 +48,9 @@ class BackupPackFileEntry:
         if self.dataset_name is not None and (
             not isinstance(self.dataset_name, str) or not self.dataset_name
         ):
-            raise BackupPackValidationError("files[].dataset_name must be a non-empty string or null")
+            raise BackupPackValidationError(
+                "files[].dataset_name must be a non-empty string or null"
+            )
         if self.checksum is not None and (not isinstance(self.checksum, str) or not self.checksum):
             raise BackupPackValidationError("files[].checksum must be a non-empty string or null")
         if self.checksum_algorithm is not None and (
@@ -134,7 +136,13 @@ class BackupPackShardEntry:
     def from_mapping(cls, data: Mapping[str, Any]) -> "BackupPackShardEntry":
         if not isinstance(data, Mapping):
             raise BackupPackValidationError("shards[] must be an object")
-        required = ["shard_name", "relative_path", "shard_index", "file_count", "uncompressed_bytes"]
+        required = [
+            "shard_name",
+            "relative_path",
+            "shard_index",
+            "file_count",
+            "uncompressed_bytes",
+        ]
         _require_fields(data, "shards[]", required)
         return cls(
             shard_name=_required_str(data, "shards[]", "shard_name"),
@@ -263,11 +271,15 @@ class BackupPackManifest:
             _validate_non_negative_int(self.total_archive_bytes, "total_archive_bytes")
 
         files = tuple(
-            item if isinstance(item, BackupPackFileEntry) else BackupPackFileEntry.from_mapping(item)
+            item
+            if isinstance(item, BackupPackFileEntry)
+            else BackupPackFileEntry.from_mapping(item)
             for item in self.files
         )
         shards = tuple(
-            item if isinstance(item, BackupPackShardEntry) else BackupPackShardEntry.from_mapping(item)
+            item
+            if isinstance(item, BackupPackShardEntry)
+            else BackupPackShardEntry.from_mapping(item)
             for item in self.shards
         )
         restore = (
@@ -469,7 +481,9 @@ def write_manifest(manifest: BackupPackManifest, path: Path | str) -> Path:
     return output_path
 
 
-def validate_manifest_contract(manifest: Mapping[str, Any] | BackupPackManifest) -> BackupPackManifest:
+def validate_manifest_contract(
+    manifest: Mapping[str, Any] | BackupPackManifest,
+) -> BackupPackManifest:
     if isinstance(manifest, BackupPackManifest):
         return BackupPackManifest.from_mapping(manifest.to_dict())
     return BackupPackManifest.from_mapping(manifest)
@@ -529,8 +543,10 @@ def _normalize_partition_mapping(value: Mapping[str, str]) -> dict[str, str]:
 def _normalize_included_datasets(
     datasets: Sequence[str], files: Sequence[BackupPackFileEntry]
 ) -> tuple[str, ...]:
-    values = tuple(datasets) if datasets else tuple(
-        file_entry.dataset_name for file_entry in files if file_entry.dataset_name
+    values = (
+        tuple(datasets)
+        if datasets
+        else tuple(file_entry.dataset_name for file_entry in files if file_entry.dataset_name)
     )
     return _normalize_string_tuple(values, "included_datasets")
 
@@ -599,7 +615,9 @@ def _optional_str(data: Mapping[str, Any], section: str, field_name: str) -> str
         return None
     value = data[field_name]
     if not isinstance(value, str) or not value:
-        raise BackupPackValidationError(f"{section}.{field_name} must be a non-empty string or null")
+        raise BackupPackValidationError(
+            f"{section}.{field_name} must be a non-empty string or null"
+        )
     return value
 
 
