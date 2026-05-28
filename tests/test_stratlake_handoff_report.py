@@ -170,6 +170,28 @@ def test_qa_existing_artifacts_are_referenced(tmp_path: Path) -> None:
     ]
 
 
+def test_qa_selected_run_uses_deterministic_lexical_order(tmp_path: Path) -> None:
+    curated_root = tmp_path / "data" / "curated"
+    _create_daily_dataset(curated_root)
+
+    qa_root = tmp_path / "artifacts" / "qa"
+    older = qa_root / "qa_bars_daily_1D_2025-01-01_2025-01-02_XNYS"
+    newer = qa_root / "qa_bars_daily_1D_2025-01-01_2025-01-31_XNYS"
+    older.mkdir(parents=True, exist_ok=True)
+    newer.mkdir(parents=True, exist_ok=True)
+    (older / "qa_summary_global.csv").write_text("overall_status,total_rows\nPASS,1\n", encoding="utf-8")
+    (newer / "qa_summary_global.csv").write_text("overall_status,total_rows\nWARN,1\n", encoding="utf-8")
+
+    report = build_stratlake_handoff_report(
+        root=tmp_path,
+        curated_root=curated_root,
+        qa_root=qa_root,
+    )
+
+    assert report["qa"]["latest_run_id"] == newer.name
+    assert report["qa"]["status"] == "warning"
+
+
 def test_deterministic_json_serialization(tmp_path: Path) -> None:
     curated_root = tmp_path / "data" / "curated"
     _create_daily_dataset(curated_root)
@@ -190,6 +212,39 @@ def test_deterministic_json_serialization(tmp_path: Path) -> None:
 
     assert dumped_one == dumped_two
     assert dumped_one.endswith("\n")
+
+
+def test_default_generated_at_utc_is_none_and_deterministic(tmp_path: Path) -> None:
+    curated_root = tmp_path / "data" / "curated"
+    _create_daily_dataset(curated_root)
+
+    report_one = build_stratlake_handoff_report(
+        root=tmp_path,
+        curated_root=curated_root,
+    )
+    report_two = build_stratlake_handoff_report(
+        root=tmp_path,
+        curated_root=curated_root,
+    )
+
+    assert report_one["generated_at_utc"] is None
+    assert report_two["generated_at_utc"] is None
+    assert dumps_stratlake_handoff_report_json(report_one) == dumps_stratlake_handoff_report_json(
+        report_two
+    )
+
+
+def test_explicit_generated_at_utc_is_preserved(tmp_path: Path) -> None:
+    curated_root = tmp_path / "data" / "curated"
+    _create_daily_dataset(curated_root)
+
+    report = build_stratlake_handoff_report(
+        root=tmp_path,
+        curated_root=curated_root,
+        generated_at_utc="2026-05-28T12:00:00Z",
+    )
+
+    assert report["generated_at_utc"] == "2026-05-28T12:00:00Z"
 
 
 def test_write_report_creates_output_path(tmp_path: Path) -> None:
@@ -260,3 +315,40 @@ def test_stratlake_handoff_cli_smoke(tmp_path: Path, capsys) -> None:
     assert rc == 0
     assert "StratLake handoff report:" in captured.out
     assert output.exists()
+
+
+def test_stratlake_handoff_cli_output_is_deterministic_without_timestamp(tmp_path: Path) -> None:
+    workspace_root = tmp_path / "workspace"
+    curated_root = workspace_root / "data" / "curated"
+    _create_daily_dataset(curated_root)
+
+    output = workspace_root / "artifacts" / "handoff" / "stratlake_marketlake_handoff.json"
+
+    rc_first = handoff_cli_main(
+        [
+            "--root",
+            str(workspace_root),
+            "--curated-root",
+            "data/curated",
+            "--output",
+            str(output),
+        ]
+    )
+    assert rc_first == 0
+    first_text = output.read_text(encoding="utf-8")
+
+    rc_second = handoff_cli_main(
+        [
+            "--root",
+            str(workspace_root),
+            "--curated-root",
+            "data/curated",
+            "--output",
+            str(output),
+        ]
+    )
+    assert rc_second == 0
+    second_text = output.read_text(encoding="utf-8")
+
+    assert first_text == second_text
+    assert '"generated_at_utc": null' in first_text

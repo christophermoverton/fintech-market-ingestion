@@ -525,6 +525,13 @@ fintech-stratlake-handoff-report \
 Use `stratlake_marketlake_root` from the generated JSON as StratLake
 `MARKETLAKE_ROOT` or `--marketlake-root`.
 
+By default, `generated_at_utc` is `null`, which keeps the JSON deterministic
+for unchanged local filesystem inputs. Pass `--generated-at-utc` only when you
+want explicit timestamp metadata in the report.
+
+If QA artifacts are present, the selected QA run is chosen by deterministic
+lexical ordering of QA run directory names.
+
 Boundary: the report is derived/non-canonical diagnostics. It does not run
 ingestion, QA, archive restore/pack, Google API/OAuth, network operations, or
 StratLake execution workflows.

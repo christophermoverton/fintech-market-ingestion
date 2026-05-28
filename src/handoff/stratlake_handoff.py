@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import json
 import re
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -76,7 +75,8 @@ def build_stratlake_handoff_report(
     return {
         "schema_version": HANDOFF_REPORT_SCHEMA_VERSION,
         "report_type": HANDOFF_REPORT_TYPE,
-        "generated_at_utc": generated_at_utc or _utc_now_string(),
+        # Default None keeps report JSON deterministic for unchanged filesystem inputs.
+        "generated_at_utc": generated_at_utc,
         "non_canonical": True,
         "curated_root": curated_root_rel,
         "curated_root_runtime_path": curated_runtime_root.as_posix(),
@@ -179,6 +179,7 @@ def _summarize_qa(
             "artifacts": [],
         }
 
+    # "Latest" is selected by deterministic lexical directory ordering.
     run_dirs = sorted(path for path in qa_runtime_root.iterdir() if path.is_dir() and not _is_hidden(path))
     if not run_dirs:
         return {
@@ -290,10 +291,6 @@ def _resolve_under_root(workspace_root: Path, path: Path | str) -> Path:
     candidate = candidate.resolve(strict=False)
     workspace_relative_path(workspace_root, candidate)
     return candidate
-
-
-def _utc_now_string() -> str:
-    return datetime.now(timezone.utc).replace(microsecond=0).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
 def _is_hidden(path: Path) -> bool:

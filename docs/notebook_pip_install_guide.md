@@ -499,6 +499,13 @@ Installed console script (equivalent):
 The report is derived and non-canonical. It does not run ingestion, QA,
 restore, archive pack creation, network calls, or StratLake workflows.
 
+By default, the report writes `generated_at_utc` as `null` for deterministic
+output when local filesystem inputs are unchanged. Provide
+`--generated-at-utc` only when you want timestamp metadata in the report.
+
+If QA artifacts exist, QA run selection uses deterministic lexical ordering of
+QA run directory names.
+
 Live Alpaca backfills require credentials and network access. Drive save,
 restore, and archive steps require an already-mounted Drive path. Defining the
 profile itself is CI-safe and has no side effects.

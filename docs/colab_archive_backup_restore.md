@@ -21,8 +21,8 @@ The restore-first Colab pattern is:
   data.
 9. Review QA and handoff artifacts and decide block-versus-warn readiness for
   downstream use.
-10. Run local feature, analysis, or downstream handoff workflows against local
-   files.
+10. Run local QA, research, analysis, or downstream handoff workflows against
+  local files.
 11. Optionally create a fresh backup pack back to mounted Drive when finished.
 
 Local partitioned Parquet remains the canonical working dataset after restore.
@@ -371,14 +371,21 @@ The handoff report helps answer:
 - which datasets/timeframes/symbols/date ranges are present;
 - whether QA artifacts are available and where they live.
 
+By default, `generated_at_utc` is `null` so the report stays deterministic for
+unchanged local filesystem inputs. Use `--generated-at-utc` only when a
+timestamped report is intentionally desired.
+
+When QA artifacts exist, the selected QA run is chosen by deterministic lexical
+ordering of QA run directory names.
+
 The report does not run ingestion, QA, archive pack restore/creation, Google
 APIs, OAuth, or StratLake execution.
 
 ### 9. Run Local Workflows
 
-After restore, point ingestion, feature, QA, or analysis commands at the local
-workspace and local dataset root. Avoid using the mounted Drive backup folder as
-the active dataset root.
+After restore, point local QA, research, analysis, or downstream handoff
+commands at the local workspace and local dataset root. Avoid using the mounted
+Drive backup folder as the active dataset root.
 
 Examples in this repository commonly read from:
 

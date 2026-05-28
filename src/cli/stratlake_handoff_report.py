@@ -46,7 +46,10 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--generated-at-utc",
         default=None,
-        help="Optional fixed UTC timestamp for deterministic report generation.",
+        help=(
+            "Optional UTC timestamp metadata. If omitted, generated_at_utc is null "
+            "for deterministic output."
+        ),
     )
     return parser
 
