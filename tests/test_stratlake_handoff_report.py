@@ -147,7 +147,9 @@ def test_qa_existing_artifacts_are_referenced(tmp_path: Path) -> None:
     qa_run = tmp_path / "artifacts" / "qa" / "qa_bars_daily_1D_2025-01-01_2025-01-31_XNYS"
     qa_run.mkdir(parents=True, exist_ok=True)
     (qa_run / "qa_summary_by_symbol.csv").write_text("symbol,rows\nAAPL,2\n", encoding="utf-8")
-    (qa_run / "qa_coverage_by_symbol.csv").write_text("symbol,coverage\nAAPL,1.0\n", encoding="utf-8")
+    (qa_run / "qa_coverage_by_symbol.csv").write_text(
+        "symbol,coverage\nAAPL,1.0\n", encoding="utf-8"
+    )
     (qa_run / "qa_summary_global.csv").write_text(
         "overall_status,total_rows\nPASS,2\n",
         encoding="utf-8",
@@ -179,8 +181,12 @@ def test_qa_selected_run_uses_deterministic_lexical_order(tmp_path: Path) -> Non
     newer = qa_root / "qa_bars_daily_1D_2025-01-01_2025-01-31_XNYS"
     older.mkdir(parents=True, exist_ok=True)
     newer.mkdir(parents=True, exist_ok=True)
-    (older / "qa_summary_global.csv").write_text("overall_status,total_rows\nPASS,1\n", encoding="utf-8")
-    (newer / "qa_summary_global.csv").write_text("overall_status,total_rows\nWARN,1\n", encoding="utf-8")
+    (older / "qa_summary_global.csv").write_text(
+        "overall_status,total_rows\nPASS,1\n", encoding="utf-8"
+    )
+    (newer / "qa_summary_global.csv").write_text(
+        "overall_status,total_rows\nWARN,1\n", encoding="utf-8"
+    )
 
     report = build_stratlake_handoff_report(
         root=tmp_path,

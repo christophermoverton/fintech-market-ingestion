@@ -180,7 +180,9 @@ def _summarize_qa(
         }
 
     # "Latest" is selected by deterministic lexical directory ordering.
-    run_dirs = sorted(path for path in qa_runtime_root.iterdir() if path.is_dir() and not _is_hidden(path))
+    run_dirs = sorted(
+        path for path in qa_runtime_root.iterdir() if path.is_dir() and not _is_hidden(path)
+    )
     if not run_dirs:
         return {
             "status": "unknown",
@@ -242,7 +244,9 @@ def _dataset_row_count(dataset_runtime_path: Path) -> int | None:
 
     con = duckdb.connect(database=":memory:")
     try:
-        result = con.execute(f"SELECT COUNT(*) AS row_count FROM read_parquet('{glob_path}')").fetchone()
+        result = con.execute(
+            f"SELECT COUNT(*) AS row_count FROM read_parquet('{glob_path}')"
+        ).fetchone()
     except Exception:
         return None
     finally:
