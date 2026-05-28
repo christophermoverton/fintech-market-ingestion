@@ -20,11 +20,13 @@ Archive backup packs are derived, non-canonical transfer artifacts.
 
 ## Storage Roles
 
-Use local runtime storage for the active project workspace:
+Use the Colab data-session profile from
+[notebook_pip_install_guide.md](notebook_pip_install_guide.md) to name these
+roots once. Use local runtime storage for the active project workspace:
 
 ```text
-/content/fintech-market-ingestion
-/content/fintech-market-ingestion/data/curated
+/content/fintech-market-ingestion-demo
+/content/fintech-market-ingestion-demo/data/curated
 ```
 
 Use mounted Google Drive as an archival checkpoint location:
@@ -60,7 +62,7 @@ Clone, install, or otherwise prepare the project under local runtime storage,
 then work from that local workspace.
 
 ```python
-%cd /content/fintech-market-ingestion
+%cd {FINTECH_ROOT}
 ```
 
 ### 3. Validate The Backup Pack On Drive
@@ -68,16 +70,16 @@ then work from that local workspace.
 Validate before restore so missing shards, checksum mismatches, malformed ZIP
 files, or unsafe member paths fail before local data is changed.
 
-```bash
-python -m src.cli.backup_data validate \
-  --backup-pack-dir /content/drive/MyDrive/fintech-market-ingestion/backups/backup_example
+```python
+!python -m src.cli.backup_data validate \
+  --backup-pack-dir "{BACKUP_PACK_DIR}"
 ```
 
 The installed console script is equivalent when the package is installed:
 
-```bash
-fintech-backup-data validate \
-  --backup-pack-dir /content/drive/MyDrive/fintech-market-ingestion/backups/backup_example
+```python
+!fintech-backup-data validate \
+  --backup-pack-dir "{BACKUP_PACK_DIR}"
 ```
 
 ### 4. Inspect Pack Contents
@@ -85,9 +87,9 @@ fintech-backup-data validate \
 Inspect the pack to confirm the included datasets, shard count, byte totals,
 checksum algorithm, and restore hints.
 
-```bash
-python -m src.cli.backup_data inspect \
-  --backup-pack-dir /content/drive/MyDrive/fintech-market-ingestion/backups/backup_example
+```python
+!python -m src.cli.backup_data inspect \
+  --backup-pack-dir "{BACKUP_PACK_DIR}"
 ```
 
 ### 5. Restore Into Local Runtime Storage
@@ -96,10 +98,10 @@ Restore into the local dataset root that normal project commands should use.
 The restore root represents the target dataset root; the restore command does
 not add another `source_dataset_root` nesting layer.
 
-```bash
-python -m src.cli.backup_data restore \
-  --backup-pack-dir /content/drive/MyDrive/fintech-market-ingestion/backups/backup_example \
-  --restore-root /content/fintech-market-ingestion/data/curated \
+```python
+!python -m src.cli.backup_data restore \
+  --backup-pack-dir "{BACKUP_PACK_DIR}" \
+  --restore-root "{CURATED_ROOT}" \
   --overwrite-policy fail
 ```
 
@@ -129,18 +131,18 @@ reports
 When running in Colab, those paths should resolve under:
 
 ```text
-/content/fintech-market-ingestion
+/content/fintech-market-ingestion-demo
 ```
 
 ### 7. Dry-Run A New Backup Pack
 
 At the end of a session, preview a new pack before writing archives to Drive.
 
-```bash
-python -m src.cli.backup_data pack \
-  --workspace-root /content/fintech-market-ingestion \
-  --source-dataset-root /content/fintech-market-ingestion/data/curated \
-  --backup-root /content/drive/MyDrive/fintech-market-ingestion/backups \
+```python
+!python -m src.cli.backup_data pack \
+  --workspace-root "{FINTECH_ROOT}" \
+  --source-dataset-root "{CURATED_ROOT}" \
+  --backup-root "{BACKUP_PACK_ROOT}" \
   --dry-run
 ```
 
@@ -149,22 +151,22 @@ python -m src.cli.backup_data pack \
 Create the backup pack only after local processing is complete and the local
 dataset is in the state you want to checkpoint.
 
-```bash
-python -m src.cli.backup_data pack \
-  --workspace-root /content/fintech-market-ingestion \
-  --source-dataset-root /content/fintech-market-ingestion/data/curated \
-  --backup-root /content/drive/MyDrive/fintech-market-ingestion/backups \
+```python
+!python -m src.cli.backup_data pack \
+  --workspace-root "{FINTECH_ROOT}" \
+  --source-dataset-root "{CURATED_ROOT}" \
+  --backup-root "{BACKUP_PACK_ROOT}" \
   --backup-id backup_after_session \
   --shard-size-mb 512
 ```
 
 Optional pack metadata and notes can be repeated:
 
-```bash
-python -m src.cli.backup_data pack \
-  --workspace-root /content/fintech-market-ingestion \
-  --source-dataset-root /content/fintech-market-ingestion/data/curated \
-  --backup-root /content/drive/MyDrive/fintech-market-ingestion/backups \
+```python
+!python -m src.cli.backup_data pack \
+  --workspace-root "{FINTECH_ROOT}" \
+  --source-dataset-root "{CURATED_ROOT}" \
+  --backup-root "{BACKUP_PACK_ROOT}" \
   --backup-id backup_after_session \
   --metadata environment=colab \
   --note "created after local QA checks"
@@ -176,8 +178,6 @@ Notebook users can call the Python APIs directly. The APIs are the primary
 implementation surface; the CLI delegates to them.
 
 ```python
-from pathlib import Path
-
 from src.backup import (
     create_backup_pack,
     inspect_backup_pack,
@@ -185,10 +185,8 @@ from src.backup import (
     validate_backup_pack,
 )
 
-backup_pack_dir = Path(
-    "/content/drive/MyDrive/fintech-market-ingestion/backups/backup_example"
-)
-restore_root = Path("/content/fintech-market-ingestion/data/curated")
+backup_pack_dir = BACKUP_PACK_DIR
+restore_root = CURATED_ROOT
 ```
 
 Validate and inspect before restore:
@@ -218,9 +216,9 @@ Create a new backup pack after local processing:
 
 ```python
 pack_result = create_backup_pack(
-    workspace_root="/content/fintech-market-ingestion",
-    source_dataset_root="/content/fintech-market-ingestion/data/curated",
-    backup_root="/content/drive/MyDrive/fintech-market-ingestion/backups",
+    workspace_root=FINTECH_ROOT,
+    source_dataset_root=CURATED_ROOT,
+    backup_root=BACKUP_PACK_ROOT,
     backup_id="backup_after_session",
     shard_size_mb=512,
 )
@@ -231,9 +229,9 @@ Preview without writing:
 
 ```python
 plan = create_backup_pack(
-    workspace_root="/content/fintech-market-ingestion",
-    source_dataset_root="/content/fintech-market-ingestion/data/curated",
-    backup_root="/content/drive/MyDrive/fintech-market-ingestion/backups",
+    workspace_root=FINTECH_ROOT,
+    source_dataset_root=CURATED_ROOT,
+    backup_root=BACKUP_PACK_ROOT,
     dry_run=True,
 )
 print(plan.dry_run)

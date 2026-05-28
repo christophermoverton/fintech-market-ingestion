@@ -227,26 +227,29 @@ files under `configs/`, `reports/`, `artifacts/quickstart/`, and
 `data/research/`, saves locally with `--policy artifacts_and_reports`, and runs
 a restore dry-run into a fresh check root.
 
-The equivalent notebook or Colab shell flow is:
+For Colab notebooks, first define the data-session profile in
+[notebook_pip_install_guide.md](notebook_pip_install_guide.md). The equivalent
+profile-driven shell flow is:
 
-```bash
-fintech-init-project \
-  --root /content/fintech-market-ingestion-demo \
+```python
+!fintech-init-project \
+  --root "{FINTECH_ROOT}" \
   --notebooks \
   --with-session \
   --session-name colab-demo
 
-fintech-save-session \
-  --root /content/fintech-market-ingestion-demo \
-  --session-id <session_id> \
+!fintech-save-session \
+  --root "{FINTECH_ROOT}" \
+  --session-id "<session_id>" \
   --policy artifacts_and_reports \
-  --adapter local \
-  --destination /content/fintech-session-export
+  --adapter google-drive \
+  --destination "{SESSION_EXPORT_ROOT}" \
+  --dry-run
 
-fintech-restore-session \
-  --root /content/fintech-restore-check \
-  --adapter local \
-  --source /content/fintech-session-export \
+!fintech-restore-session \
+  --root "{FINTECH_ROOT / 'restore_dry_run_check'}" \
+  --adapter google-drive \
+  --source "{SESSION_EXPORT_ROOT}" \
   --dry-run
 ```
 

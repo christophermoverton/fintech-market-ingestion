@@ -118,7 +118,7 @@ from src.backup import restore_backup_pack
 
 result = restore_backup_pack(
     backup_pack_dir="/content/drive/MyDrive/fintech-market-ingestion/backups/<backup_id>",
-    restore_root="/content/fintech-market-ingestion/data/curated",
+    restore_root="/content/fintech-market-ingestion-demo/data/curated",
     overwrite_policy="fail",
 )
 ```

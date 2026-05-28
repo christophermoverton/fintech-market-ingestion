@@ -20,7 +20,51 @@ pip install git+https://github.com/christophermoverton/fintech-market-ingestion.
 
 ---
 
-## 2. Bootstrap a Local Workspace
+## 2. Define a Colab Data-Session Profile
+
+In Colab, define one small profile cell before running project setup, restore,
+backfill, QA, or handoff cells. The profile is runtime configuration only: it
+does not create files, mutate `.env`, update `os.environ`, mount Google Drive,
+restore archives, write curated data, or create project-session metadata.
+
+```python
+from pathlib import Path
+
+FINTECH_ROOT = Path("/content/fintech-market-ingestion-demo").resolve()
+CURATED_ROOT = FINTECH_ROOT / "data" / "curated"
+RESEARCH_ROOT = FINTECH_ROOT / "data" / "research"
+ARTIFACTS_ROOT = FINTECH_ROOT / "artifacts"
+REPORTS_ROOT = FINTECH_ROOT / "reports"
+
+DRIVE_ROOT = Path("/content/drive/MyDrive/fintech-market-ingestion").resolve()
+SESSION_EXPORT_ROOT = DRIVE_ROOT / "sessions" / "colab-demo"
+BACKUP_PACK_ROOT = DRIVE_ROOT / "backups"
+BACKUP_PACK_ID = "backup_example"
+BACKUP_PACK_DIR = BACKUP_PACK_ROOT / BACKUP_PACK_ID
+
+START = "2024-10-01"
+END = "2025-04-15"
+TIMEFRAME = "1Day"
+SYMBOLS = ["AAPL", "MSFT"]
+
+SYMBOLS_PATH = FINTECH_ROOT / "configs" / "profile_symbols.txt"
+QA_TIMEFRAME = "1D" if TIMEFRAME == "1Day" else "1Min"
+STRATLAKE_MARKETLAKE_ROOT = CURATED_ROOT
+```
+
+Use `/content/...` for the local runtime workspace and
+`/content/drive/MyDrive/...` for already-mounted Drive persistence. Local
+partitioned Parquet under `CURATED_ROOT` remains the canonical working data.
+Mounted Drive paths are persistence or archive locations only, and archive
+backup packs remain derived, non-canonical transfer artifacts.
+
+`CURATED_ROOT` is the local root StratLake should consume as `MARKETLAKE_ROOT`
+or `--marketlake-root` after restore or ingestion has populated the local
+dataset.
+
+---
+
+## 3. Bootstrap a Local Workspace
 
 After installing, create a local workspace with sample config files and the
 standard directory layout:
@@ -75,18 +119,25 @@ For mounted-path Google Drive persistence boundaries, see
 Drive to already be mounted and does not use Google APIs or authenticate.
 Explicit save/restore commands are available once you have a session ID:
 
-```bash
-fintech-save-session \
-  --root /content/fintech-market-ingestion-demo \
-  --session-id <session_id> \
-  --policy artifacts_and_reports \
-  --adapter local \
-  --destination /content/fintech-session-export
+```python
+!fintech-init-project \
+  --root "{FINTECH_ROOT}" \
+  --notebooks \
+  --with-session \
+  --session-name colab-demo
 
-fintech-restore-session \
-  --root /content/fintech-restore-check \
-  --adapter local \
-  --source /content/fintech-session-export \
+!fintech-save-session \
+  --root "{FINTECH_ROOT}" \
+  --session-id "<session_id>" \
+  --policy artifacts_and_reports \
+  --adapter google-drive \
+  --destination "{SESSION_EXPORT_ROOT}" \
+  --dry-run
+
+!fintech-restore-session \
+  --root "{FINTECH_ROOT / 'restore_dry_run_check'}" \
+  --adapter google-drive \
+  --source "{SESSION_EXPORT_ROOT}" \
   --dry-run
 ```
 
@@ -120,7 +171,7 @@ you have written to `data/`, `reports/`, or `artifacts/`.
 
 ---
 
-## 3. Configure Alpaca Credentials
+## 4. Configure Alpaca Credentials
 
 Copy the example file and fill in your credentials:
 
@@ -145,7 +196,7 @@ directory via `python-dotenv`.
 
 ---
 
-## 4. Edit Your Symbol List
+## 5. Edit Your Symbol List
 
 `configs/tickers_sample.txt` contains 10 symbols by default. Edit it to use
 the symbols you need:
@@ -161,9 +212,17 @@ GOOGL
 
 Lines that start with `#` are treated as comments and ignored.
 
+In a profile-driven notebook, create the symbol file explicitly after
+`fintech-init-project` has created `configs/`:
+
+```python
+SYMBOLS_PATH.parent.mkdir(parents=True, exist_ok=True)
+SYMBOLS_PATH.write_text("\n".join(SYMBOLS) + "\n", encoding="utf-8")
+```
+
 ---
 
-## 5. Daily Backfill
+## 6. Daily Backfill
 
 ### Minimal Example — Q1 2025, sample symbol list
 
@@ -175,6 +234,18 @@ fintech-backfill-daily \
   --start 2025-01-01 \
   --end 2025-04-01 \
   --out data/curated/bars_daily \
+  --feed iex \
+  --window month
+```
+
+Profile-driven Colab equivalent for `TIMEFRAME = "1Day"`:
+
+```python
+!fintech-backfill-daily \
+  --symbols "{SYMBOLS_PATH}" \
+  --start "{START}" \
+  --end "{END}" \
+  --out "{CURATED_ROOT / 'bars_daily'}" \
   --feed iex \
   --window month
 ```
@@ -216,7 +287,7 @@ python -m src.ingestion.backfill_daily \
 
 ---
 
-## 6. 1-Minute Backfill
+## 7. 1-Minute Backfill
 
 ### Smoke Test — 1 Day, Small Symbol List
 
@@ -228,6 +299,19 @@ fintech-backfill-1m \
   --start 2025-01-02 \
   --end 2025-01-03 \
   --out data/curated/bars_1m \
+  --feed iex \
+  --sleep-ms 200 \
+  --no-progress
+```
+
+Profile-driven Colab equivalent for `TIMEFRAME = "1Min"`:
+
+```python
+!fintech-backfill-1m \
+  --symbols "{SYMBOLS_PATH}" \
+  --start "{START}" \
+  --end "{END}" \
+  --out "{CURATED_ROOT / 'bars_1m'}" \
   --feed iex \
   --sleep-ms 200 \
   --no-progress
@@ -259,7 +343,7 @@ python -m src.ingestion.backfill_1m \
 
 ---
 
-## 7. DuckDB Spot-Check
+## 8. DuckDB Spot-Check
 
 After a successful backfill, verify the output with DuckDB:
 
@@ -269,9 +353,9 @@ import duckdb
 conn = duckdb.connect()
 
 # Daily bars — Q1 2025
-df = conn.execute("""
+df = conn.execute(f"""
     SELECT symbol, COUNT(*) AS rows, MIN(ts_utc) AS first_bar, MAX(ts_utc) AS last_bar
-    FROM read_parquet('data/curated/bars_daily/**/*.parquet', hive_partitioning=true)
+    FROM read_parquet('{CURATED_ROOT.as_posix()}/bars_daily/**/*.parquet', hive_partitioning=true)
     WHERE ts_utc >= TIMESTAMP '2025-01-01'
       AND ts_utc < TIMESTAMP '2025-04-01'
     GROUP BY symbol
@@ -283,9 +367,9 @@ print(df)
 
 ```python
 # 1-minute bars — AAPL on 2025-01-02
-df_1m = conn.execute("""
+df_1m = conn.execute(f"""
     SELECT *
-    FROM read_parquet('data/curated/bars_1m/**/*.parquet', hive_partitioning=true)
+    FROM read_parquet('{CURATED_ROOT.as_posix()}/bars_1m/**/*.parquet', hive_partitioning=true)
     WHERE symbol = 'AAPL'
       AND date = '2025-01-02'
     ORDER BY ts_utc
@@ -297,7 +381,62 @@ print(df_1m)
 
 ---
 
-## 8. Workspace Layout Reference
+## 9. QA, Archive, and StratLake Handoff Examples
+
+The framework-level QA export currently reads the standard workspace-relative
+`data/curated/...` layout. In Colab, switch to `FINTECH_ROOT` first, then feed
+the profile values for the date window, expected symbols file, timeframe, and
+artifact root:
+
+```python
+%cd {FINTECH_ROOT}
+
+!python -m src.ingestion.qa_export \
+  --timeframe "{QA_TIMEFRAME}" \
+  --start "{START}" \
+  --end "{END}" \
+  --symbols "{SYMBOLS_PATH}" \
+  --out "{ARTIFACTS_ROOT / 'qa'}"
+```
+
+Archive backup pack commands should use mounted Drive only for the pack
+location and local runtime storage for the active dataset root:
+
+```python
+!fintech-backup-data validate \
+  --backup-pack-dir "{BACKUP_PACK_DIR}"
+
+!fintech-backup-data restore \
+  --backup-pack-dir "{BACKUP_PACK_DIR}" \
+  --restore-root "{CURATED_ROOT}" \
+  --overwrite-policy fail
+
+!fintech-backup-data pack \
+  --workspace-root "{FINTECH_ROOT}" \
+  --source-dataset-root "{CURATED_ROOT}" \
+  --backup-root "{BACKUP_PACK_ROOT}" \
+  --backup-id "backup_after_session" \
+  --shard-size-mb 512
+```
+
+For StratLake Trade Engine handoff, declare the local curated root rather than
+the Drive backup folder:
+
+```python
+print(f"MARKETLAKE_ROOT={STRATLAKE_MARKETLAKE_ROOT}")
+```
+
+```text
+CURATED_ROOT is the local root StratLake should consume as MARKETLAKE_ROOT or --marketlake-root.
+```
+
+Live Alpaca backfills require credentials and network access. Drive save,
+restore, and archive steps require an already-mounted Drive path. Defining the
+profile itself is CI-safe and has no side effects.
+
+---
+
+## 10. Workspace Layout Reference
 
 The table below summarises which files belong to the installed package and
 which are local to your workspace:
@@ -317,7 +456,7 @@ which are local to your workspace:
 
 ---
 
-## 9. Troubleshooting
+## 11. Troubleshooting
 
 ### Wrong working directory
 
@@ -377,7 +516,7 @@ If the command completes but writes no Parquet files, check:
 
 ---
 
-## 10. Available Console Scripts
+## 12. Available Console Scripts
 
 | Command | Description |
 |---------|-------------|
