@@ -110,16 +110,29 @@ Run a read-only notebook readiness preflight before validation and restore:
   --root "{FINTECH_ROOT}" \
   --drive-root "{DRIVE_ROOT}" \
   --archive-root "{BACKUP_PACK_ROOT}" \
-  --check-curated-root \
   --check-archive-root \
-  --expect-dataset bars_daily \
-  --expect-dataset bars_1m \
-  --check-secrets
+  --check-secrets \
+  --restore-root "{CURATED_ROOT}"
 ```
 
 Use `--json` for deterministic machine-readable output. The doctor is read-only:
-it does not mount Drive, call Google APIs, run validation/restore/QA/handoff,
-or mutate local/Drive files, session metadata, `.env`, or environment values.
+it does not mount Drive, call Google APIs, validate archive checksums, restore
+files, run validation/restore/QA/handoff, or mutate local/Drive files, session
+metadata, `.env`, or environment values. Secret checks report `SET` / `NOT SET`
+only.
+
+Use dataset expectations after restore or after local backfill when datasets are
+expected to exist:
+
+```python
+!fintech-notebook-doctor \
+  --root "{FINTECH_ROOT}" \
+  --check-curated-root \
+  --expect-dataset bars_daily \
+  --expect-dataset bars_1m
+```
+
+Missing expected datasets intentionally produce `fail` status.
 
 ### 3. Validate The Backup Pack On Drive
 

@@ -183,36 +183,48 @@ loading or default paths:
 ```
 
 Before expensive restore, QA, ingestion, or handoff cells, run the read-only
-notebook doctor to validate local roots, optional mounted Drive/archive roots,
-likely restored datasets, and optional credential presence:
+notebook doctor pre-restore check to validate local roots, mounted Drive path
+reachability, archive root reachability, optional credential presence, and
+restore-target safety:
 
 ```python
 !fintech-notebook-doctor \
   --root "{FINTECH_ROOT}" \
   --drive-root "{DRIVE_ROOT}" \
   --archive-root "{BACKUP_PACK_ROOT}" \
-  --check-curated-root \
   --check-archive-root \
-  --check-secrets
+  --check-secrets \
+  --restore-root "{CURATED_ROOT}"
 ```
 
-JSON-only output for deterministic notebook automation:
+Use `--expect-dataset` after restore or after local backfill when those
+datasets are expected to exist. Missing expected datasets intentionally produce
+`fail` status.
 
 ```python
 !fintech-notebook-doctor \
   --root "{FINTECH_ROOT}" \
-  --drive-root "{DRIVE_ROOT}" \
-  --archive-root "{BACKUP_PACK_ROOT}" \
   --check-curated-root \
   --expect-dataset bars_daily \
-  --expect-dataset bars_1m \
+  --expect-dataset bars_1m
+```
+
+JSON-only output for deterministic notebook automation (post-restore example):
+
+```python
+!fintech-notebook-doctor \
+  --root "{FINTECH_ROOT}" \
+  --check-curated-root \
+  --expect-dataset bars_daily \
   --json
 ```
 
 `fintech-notebook-doctor` is strictly read-only. It does not mount Drive,
-authenticate, call Google APIs, mutate `.env` or `os.environ`, run ingestion,
-run QA, create or restore archive packs, run save/restore adapters, mutate
-curated/research data, or execute StratLake workflows.
+authenticate, call Google APIs, validate archive checksums, restore files,
+run ingestion, run QA, create archive packs, run save/restore adapters,
+mutate `.env` or `os.environ`, mutate curated/research data, or execute
+StratLake workflows. Secret checks only report `SET` / `NOT SET` and never
+print secret values.
 
 Live Alpaca commands load `.env` from the current working directory. In a
 profile-driven Colab notebook, run credential-loaded ingestion and backfill
