@@ -182,6 +182,38 @@ loading or default paths:
 %cd {FINTECH_ROOT}
 ```
 
+Before expensive restore, QA, ingestion, or handoff cells, run the read-only
+notebook doctor to validate local roots, optional mounted Drive/archive roots,
+likely restored datasets, and optional credential presence:
+
+```python
+!fintech-notebook-doctor \
+  --root "{FINTECH_ROOT}" \
+  --drive-root "{DRIVE_ROOT}" \
+  --archive-root "{BACKUP_PACK_ROOT}" \
+  --check-curated-root \
+  --check-archive-root \
+  --check-secrets
+```
+
+JSON-only output for deterministic notebook automation:
+
+```python
+!fintech-notebook-doctor \
+  --root "{FINTECH_ROOT}" \
+  --drive-root "{DRIVE_ROOT}" \
+  --archive-root "{BACKUP_PACK_ROOT}" \
+  --check-curated-root \
+  --expect-dataset bars_daily \
+  --expect-dataset bars_1m \
+  --json
+```
+
+`fintech-notebook-doctor` is strictly read-only. It does not mount Drive,
+authenticate, call Google APIs, mutate `.env` or `os.environ`, run ingestion,
+run QA, create or restore archive packs, run save/restore adapters, mutate
+curated/research data, or execute StratLake workflows.
+
 Live Alpaca commands load `.env` from the current working directory. In a
 profile-driven Colab notebook, run credential-loaded ingestion and backfill
 commands from `FINTECH_ROOT` unless you have already populated the environment
@@ -604,6 +636,7 @@ If the command completes but writes no Parquet files, check:
 | `fintech-init-project` | Bootstrap a local workspace |
 | `fintech-save-session` | Save selected session files to a persistence target |
 | `fintech-restore-session` | Restore selected files from a persistence target |
+| `fintech-notebook-doctor` | Run read-only notebook readiness checks |
 | `fintech-backfill-daily` | Backfill daily OHLCV bars |
 | `fintech-backfill-1m` | Backfill 1-minute OHLCV bars |
 | `fintech-ingest-corporate-actions` | Ingest dividend / corporate-action events |

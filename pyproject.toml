@@ -63,6 +63,7 @@ fintech-build-dividend-research-mart = "src.cli.build_dividend_research_mart:mai
 fintech-ingest-corporate-actions = "src.cli.ingest_corporate_actions:main"
 fintech-join-dividend-event-windows = "src.cli.join_dividend_event_windows:main"
 fintech-validate-dividend-research-mart = "src.cli.validate_dividend_research_mart:main"
+fintech-notebook-doctor = "src.cli.notebook_doctor:main"
 
 [project.urls]
 Homepage = "https://github.com/christophermoverton/fintech-market-ingestion"

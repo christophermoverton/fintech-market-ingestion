@@ -103,6 +103,24 @@ workspace-relative commands:
 %cd {FINTECH_ROOT}
 ```
 
+Run a read-only notebook readiness preflight before validation and restore:
+
+```python
+!fintech-notebook-doctor \
+  --root "{FINTECH_ROOT}" \
+  --drive-root "{DRIVE_ROOT}" \
+  --archive-root "{BACKUP_PACK_ROOT}" \
+  --check-curated-root \
+  --check-archive-root \
+  --expect-dataset bars_daily \
+  --expect-dataset bars_1m \
+  --check-secrets
+```
+
+Use `--json` for deterministic machine-readable output. The doctor is read-only:
+it does not mount Drive, call Google APIs, run validation/restore/QA/handoff,
+or mutate local/Drive files, session metadata, `.env`, or environment values.
+
 ### 3. Validate The Backup Pack On Drive
 
 Validate before restore so missing shards, checksum mismatches, malformed ZIP
