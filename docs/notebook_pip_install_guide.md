@@ -460,6 +460,11 @@ location and local runtime storage for the active dataset root:
   --shard-size-mb 512
 ```
 
+For the full restore-first Colab sequence, including Drive mount setup,
+validate/inspect-before-restore guidance, overwrite policy choices, and archive
+packs versus project-session save/restore, see
+[colab_archive_backup_restore.md](colab_archive_backup_restore.md).
+
 For StratLake Trade Engine handoff, declare the local curated root rather than
 the Drive backup folder:
 
