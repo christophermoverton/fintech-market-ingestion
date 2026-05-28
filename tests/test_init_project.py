@@ -68,6 +68,30 @@ def test_creates_notebooks_when_flag_given(tmp_path: Path) -> None:
     assert (tmp_path / "notebooks").is_dir()
 
 
+def test_colab_profile_creates_colab_ready_workspace_shape(tmp_path: Path) -> None:
+    run(tmp_path, ["--colab-profile"])
+
+    expected_dirs = [
+        "configs",
+        "data/curated",
+        "data/research",
+        "artifacts",
+        "reports",
+        "notebooks",
+    ]
+    for relative_path in expected_dirs:
+        assert (tmp_path / relative_path).is_dir()
+
+
+def test_colab_profile_with_notebooks_is_idempotent(tmp_path: Path) -> None:
+    run(tmp_path, ["--colab-profile", "--notebooks"])
+    rc = run(tmp_path, ["--colab-profile", "--notebooks"])
+
+    assert rc == 0
+    assert (tmp_path / "data" / "research").is_dir()
+    assert (tmp_path / "notebooks").is_dir()
+
+
 # ---------------------------------------------------------------------------
 # Sample file creation
 # ---------------------------------------------------------------------------
@@ -138,6 +162,28 @@ def test_force_overwrites_env_example(tmp_path: Path) -> None:
     run(tmp_path, ["--force"])
 
     assert env_example.read_text() == ENV_EXAMPLE_CONTENT
+
+
+def test_force_with_colab_profile_does_not_overwrite_user_outputs(tmp_path: Path) -> None:
+    research_file = tmp_path / "data" / "research" / "user_notes.txt"
+    notebook_file = tmp_path / "notebooks" / "user_notebook.ipynb"
+    artifact_file = tmp_path / "artifacts" / "user_artifact.json"
+    report_file = tmp_path / "reports" / "user_report.txt"
+    for path, content in [
+        (research_file, "research\n"),
+        (notebook_file, "{}\n"),
+        (artifact_file, "{}\n"),
+        (report_file, "report\n"),
+    ]:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(content, encoding="utf-8")
+
+    run(tmp_path, ["--force", "--colab-profile"])
+
+    assert research_file.read_text(encoding="utf-8") == "research\n"
+    assert notebook_file.read_text(encoding="utf-8") == "{}\n"
+    assert artifact_file.read_text(encoding="utf-8") == "{}\n"
+    assert report_file.read_text(encoding="utf-8") == "report\n"
 
 
 # ---------------------------------------------------------------------------
@@ -258,6 +304,27 @@ def test_with_session_does_not_mutate_research_reports_or_curated_data(tmp_path:
     assert list((tmp_path / "data" / "curated").iterdir()) == []
     assert not (tmp_path / "data" / "research").exists()
     assert list((tmp_path / "reports").iterdir()) == []
+
+
+def test_colab_profile_with_session_creates_only_metadata_and_empty_workspace_dirs(
+    tmp_path: Path,
+) -> None:
+    run(tmp_path, ["--colab-profile", "--with-session", "--session-name", "colab-market-data"])
+
+    manifests = session_manifest_files(tmp_path)
+    assert len(manifests) == 1
+    manifest = load_manifest(manifests[0])
+
+    assert manifest.session_name == "colab-market-data"
+    assert manifest.workspace.paths.to_dict()["research_data"] == "data/research"
+    assert manifest.persistence.adapter == "none"
+    assert manifest.persistence.destination is None
+    assert manifest.save_policy.mode == "metadata_only"
+    assert list((tmp_path / "data" / "curated").iterdir()) == []
+    assert list((tmp_path / "data" / "research").iterdir()) == []
+    assert list((tmp_path / "reports").iterdir()) == []
+    assert not (tmp_path / "artifacts" / "session_exports").exists()
+    assert not (tmp_path / "artifacts" / "restores").exists()
 
 
 def test_repeated_with_session_creates_new_timestamped_sessions(

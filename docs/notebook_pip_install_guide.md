@@ -86,6 +86,35 @@ artifacts/                   ← QA run artifacts
 .env.example                 ← credential template
 ```
 
+For a fresh Colab runtime, use the profile root and request the Colab-ready
+workspace shape in one initialization command:
+
+```python
+!fintech-init-project \
+  --root "{FINTECH_ROOT}" \
+  --colab-profile \
+  --with-session \
+  --session-name colab-market-data
+```
+
+That creates:
+
+```text
+configs/
+data/curated/
+data/research/
+artifacts/
+reports/
+notebooks/
+.env.example
+configs/tickers_sample.txt
+```
+
+`--colab-profile` only creates local runtime directories and generated sample
+files. It does not run ingestion, QA, save, restore, archive backup, persistence
+adapters, Google Drive mounting, Google APIs, OAuth, network calls, or
+credential handling.
+
 To also create a `notebooks/` directory:
 
 ```bash
@@ -122,9 +151,9 @@ Explicit save/restore commands are available once you have a session ID:
 ```python
 !fintech-init-project \
   --root "{FINTECH_ROOT}" \
-  --notebooks \
+  --colab-profile \
   --with-session \
-  --session-name colab-demo
+  --session-name colab-market-data
 
 !fintech-save-session \
   --root "{FINTECH_ROOT}" \
@@ -458,9 +487,10 @@ which are local to your workspace:
 | `configs/` | **Local workspace** | Created by `fintech-init-project` |
 | `configs/tickers_sample.txt` | **Local workspace** | Editable symbol list |
 | `data/` | **Local workspace** | Parquet datasets |
+| `data/research/` | **Local workspace** | Derived research outputs; created with `--colab-profile` or by research workflows |
 | `reports/` | **Local workspace** | Failure CSV files |
 | `artifacts/` | **Local workspace** | QA run artifacts |
-| `notebooks/` | **Local workspace** | Optional; created with `--notebooks` |
+| `notebooks/` | **Local workspace** | Optional; created with `--notebooks` or `--colab-profile` |
 | `.env` | **Local workspace** | Credentials — never commit |
 | `.env.example` | **Local workspace** | Credential template |
 | Installed scripts | **Package** | `fintech-backfill-daily`, etc. |

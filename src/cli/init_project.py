@@ -7,7 +7,8 @@ mutate any package-internal directories.
 Usage:
     fintech-init-project [--root PATH] [--notebooks] [--force]
     fintech-init-project [--root PATH] [--notebooks] [--with-session] [--session-name NAME]
-    python -m src.cli.init_project [--root PATH] [--notebooks] [--with-session] [--session-name NAME] [--force]
+    fintech-init-project [--root PATH] [--colab-profile] [--with-session] [--session-name NAME]
+    python -m src.cli.init_project [--root PATH] [--notebooks] [--colab-profile] [--with-session] [--session-name NAME] [--force]
 """
 
 from __future__ import annotations
@@ -54,14 +55,18 @@ FORCED = "overwritten (--force)"
 DEFAULT_SESSION_NAME = "default"
 
 
-def _create_dirs(root: Path, include_notebooks: bool) -> list[tuple[str, str]]:
+def _create_dirs(
+    root: Path, *, include_notebooks: bool, include_colab_profile: bool
+) -> list[tuple[str, str]]:
     dirs = [
         root / "configs",
         root / "data" / "curated",
         root / "reports",
         root / "artifacts",
     ]
-    if include_notebooks:
+    if include_colab_profile:
+        dirs.append(root / "data" / "research")
+    if include_notebooks or include_colab_profile:
         dirs.append(root / "notebooks")
 
     results: list[tuple[str, str]] = []
@@ -111,6 +116,16 @@ def main(argv: list[str] | None = None) -> int:
         help="Also create a notebooks/ directory.",
     )
     ap.add_argument(
+        "--colab-profile",
+        action="store_true",
+        default=False,
+        help=(
+            "Create a Colab-ready local workspace shape, including data/research/ "
+            "and notebooks/. Does not run ingestion, QA, persistence, save, restore, "
+            "archive, Drive, or credential behavior."
+        ),
+    )
+    ap.add_argument(
         "--force",
         action="store_true",
         default=False,
@@ -143,7 +158,13 @@ def main(argv: list[str] | None = None) -> int:
     summary: list[tuple[str, str]] = []
 
     # Create directories
-    summary.extend(_create_dirs(root, args.notebooks))
+    summary.extend(
+        _create_dirs(
+            root,
+            include_notebooks=args.notebooks,
+            include_colab_profile=args.colab_profile,
+        )
+    )
 
     # Write sample files
     tickers_path = root / "configs" / "tickers_sample.txt"
@@ -192,6 +213,15 @@ def main(argv: list[str] | None = None) -> int:
         print("  A metadata-only session manifest was written under artifacts/sessions/.")
         print("  Re-running --with-session creates a new timestamped session manifest.")
         print("  Session initialization does not copy curated data or run persistence sync.")
+
+    if args.colab_profile:
+        print()
+        print("Colab profile:")
+        print("  Created local runtime directories for curated data, research data, artifacts,")
+        print("  reports, configs, and notebooks.")
+        print(
+            "  No ingestion, QA, save, restore, archive, Drive mount, or credential behavior ran."
+        )
 
     return 0
 

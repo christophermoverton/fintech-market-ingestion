@@ -65,6 +65,17 @@ Project-session creation is opt-in during workspace bootstrap:
 fintech-init-project --root . --notebooks --with-session --session-name demo
 ```
 
+For a Colab-ready local workspace with configs, curated data, research data,
+artifacts, reports, notebooks, and optional session metadata:
+
+```bash
+fintech-init-project \
+  --root /content/fintech-market-ingestion-demo \
+  --colab-profile \
+  --with-session \
+  --session-name colab-market-data
+```
+
 This preserves the normal `fintech-init-project` behavior and additionally
 writes:
 
@@ -234,9 +245,9 @@ profile-driven shell flow is:
 ```python
 !fintech-init-project \
   --root "{FINTECH_ROOT}" \
-  --notebooks \
+  --colab-profile \
   --with-session \
-  --session-name colab-demo
+  --session-name colab-market-data
 
 !fintech-save-session \
   --root "{FINTECH_ROOT}" \
