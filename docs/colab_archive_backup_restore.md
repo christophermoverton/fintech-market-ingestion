@@ -16,9 +16,12 @@ The restore-first Colab pattern is:
    --colab-profile`.
 5. Validate and inspect a backup pack on mounted Drive before restore.
 6. Restore curated data into local runtime storage at `CURATED_ROOT`.
-7. Run local QA, feature, analysis, or downstream handoff workflows against
-   local files.
-8. Optionally create a fresh backup pack back to mounted Drive when finished.
+7. Run post-restore QA against local restored curated data before handoff.
+8. Review QA artifacts and decide block-versus-warn readiness for downstream
+  use.
+9. Run local feature, analysis, or downstream handoff workflows against local
+  files.
+10. Optionally create a fresh backup pack back to mounted Drive when finished.
 
 Local partitioned Parquet remains the canonical working dataset after restore.
 Archive backup packs are derived, non-canonical transfer artifacts.
@@ -170,7 +173,135 @@ Overwrite policies:
 
 Restore does not delete unrelated local files.
 
-### 6. Declare The Local Handoff Root
+### 6. Run Post-Restore QA Before Handoff
+
+After restore, validate local curated data before downstream analysis or
+StratLake handoff. The QA command is read-only with respect to restored Parquet
+files and writes diagnostics to artifact outputs only.
+
+The current QA CLI surface is:
+
+```python
+!python -m src.ingestion.qa_export --help
+```
+
+Key arguments for post-restore validation:
+
+- `--timeframe` with `1D`, `1Min`, or `all`
+- `--start` and `--end` for the requested window
+- `--symbols` for expected symbol coverage
+- `--out` for artifact output root
+
+Current behavior reads from workspace-relative curated paths:
+
+```text
+data/curated/bars_daily/**/*.parquet
+data/curated/bars_1m/**/*.parquet
+```
+
+So run QA from the initialized local workspace root and keep the restore target
+aligned with that workspace:
+
+```python
+%cd {FINTECH_ROOT}
+
+assert CURATED_ROOT == FINTECH_ROOT / "data" / "curated"
+```
+
+Daily-bars QA with profile variables:
+
+```python
+QA_TIMEFRAME = "1D"
+
+!python -m src.ingestion.qa_export \
+  --timeframe "{QA_TIMEFRAME}" \
+  --start "{START}" \
+  --end "{END}" \
+  --symbols "{SYMBOLS_PATH}" \
+  --out "{ARTIFACTS_ROOT / 'qa'}"
+```
+
+1-minute QA is supported on the same surface:
+
+```python
+QA_TIMEFRAME = "1Min"
+
+!python -m src.ingestion.qa_export \
+  --timeframe "{QA_TIMEFRAME}" \
+  --start "{START}" \
+  --end "{END}" \
+  --symbols "{SYMBOLS_PATH}" \
+  --out "{ARTIFACTS_ROOT / 'qa_1m'}"
+```
+
+You can also run both in one command:
+
+```python
+!python -m src.ingestion.qa_export \
+  --timeframe all \
+  --start "{START}" \
+  --end "{END}" \
+  --symbols "{SYMBOLS_PATH}" \
+  --out "{ARTIFACTS_ROOT / 'qa'}"
+```
+
+QA outputs are written under a deterministic run-id folder:
+
+```text
+artifacts/qa/<run_id>/
+  qa_summary_by_symbol.csv
+  qa_summary_global.csv
+  qa_coverage_by_symbol.csv
+```
+
+Typical inspection flow:
+
+```python
+from pathlib import Path
+import pandas as pd
+
+qa_runs = sorted((ARTIFACTS_ROOT / "qa").glob("qa_*/"))
+latest_run = qa_runs[-1]
+
+global_df = pd.read_csv(latest_run / "qa_summary_global.csv")
+by_symbol_df = pd.read_csv(latest_run / "qa_summary_by_symbol.csv")
+coverage_df = pd.read_csv(latest_run / "qa_coverage_by_symbol.csv")
+
+display(global_df)
+display(by_symbol_df.head(20))
+display(coverage_df.head(20))
+```
+
+Interpretation guidance before handoff:
+
+Block downstream handoff when:
+
+- expected dataset paths are missing under the restored curated root;
+- expected symbols have zero rows in the requested date window;
+- duplicate key counts are non-zero when strict uniqueness is required;
+- OHLC integrity violations are non-zero;
+- coverage is materially below your expected threshold;
+- timestamps are malformed or outside the requested bounds.
+
+Warn and review when:
+
+- coverage gaps align with weekends or exchange holidays;
+- a symbol has explainable partial coverage for the selected window;
+- 1-minute market-calendar gaps need expected-session interpretation;
+- optional datasets are absent but not required for your next workflow.
+
+Post-restore QA is local and credential-free:
+
+- no Alpaca credentials are needed for QA over restored files;
+- no Google Drive API or OAuth is required;
+- no background sync or network access is required;
+- restored local curated Parquet remains canonical working data;
+- QA artifacts are diagnostics only and do not mutate curated files.
+
+Fintech QA validates source curated data quality. StratLake should still perform
+its own consumer-side universe/date/timeframe validation during handoff.
+
+### 7. Declare The Local Handoff Root
 
 After restore, `CURATED_ROOT` is the local root for framework QA and downstream
 consumers. For StratLake Trade Engine handoff, use this local root as
@@ -182,7 +313,7 @@ print(f"Restored local curated root: {CURATED_ROOT}")
 print(f"Use as StratLake MARKETLAKE_ROOT: {CURATED_ROOT}")
 ```
 
-### 7. Run Local Workflows
+### 8. Run Local Workflows
 
 After restore, point ingestion, feature, QA, or analysis commands at the local
 workspace and local dataset root. Avoid using the mounted Drive backup folder as
@@ -203,7 +334,7 @@ When running in Colab, those paths should resolve under:
 /content/fintech-market-ingestion-demo
 ```
 
-### 8. Dry-Run A New Backup Pack
+### 9. Dry-Run A New Backup Pack
 
 At the end of a session, preview a new pack before writing archives to Drive.
 
@@ -215,7 +346,7 @@ At the end of a session, preview a new pack before writing archives to Drive.
   --dry-run
 ```
 
-### 9. Create A Fresh Backup Pack To Drive
+### 10. Create A Fresh Backup Pack To Drive
 
 Create the backup pack only after local processing is complete and the local
 dataset is in the state you want to checkpoint.
