@@ -498,6 +498,39 @@ The `qa_export` CLI formalizes dataset observability and enables production-grad
 
 ---
 
+## StratLake Handoff Report
+
+After local restore, local backfill, or post-restore QA, generate a deterministic
+local handoff report that summarizes curated dataset presence, symbols, date
+coverage, timeframe coverage, and QA artifact references.
+
+```bash
+python -m src.cli.stratlake_handoff_report \
+  --root . \
+  --curated-root data/curated \
+  --qa-root artifacts/qa \
+  --output artifacts/handoff/stratlake_marketlake_handoff.json
+```
+
+Installed console script:
+
+```bash
+fintech-stratlake-handoff-report \
+  --root . \
+  --curated-root data/curated \
+  --qa-root artifacts/qa \
+  --output artifacts/handoff/stratlake_marketlake_handoff.json
+```
+
+Use `stratlake_marketlake_root` from the generated JSON as StratLake
+`MARKETLAKE_ROOT` or `--marketlake-root`.
+
+Boundary: the report is derived/non-canonical diagnostics. It does not run
+ingestion, QA, archive restore/pack, Google API/OAuth, network operations, or
+StratLake execution workflows.
+
+---
+
 ## Universe Selection Criteria
 
 The project operates on a curated universe (currently 50 tickers) optimized for stable historical availability.

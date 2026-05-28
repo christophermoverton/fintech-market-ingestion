@@ -476,6 +476,29 @@ print(f"MARKETLAKE_ROOT={STRATLAKE_MARKETLAKE_ROOT}")
 CURATED_ROOT is the local root StratLake should consume as MARKETLAKE_ROOT or --marketlake-root.
 ```
 
+Generate a deterministic local handoff summary after restore or backfill:
+
+```python
+!python -m src.cli.stratlake_handoff_report \
+  --root "{FINTECH_ROOT}" \
+  --curated-root "{CURATED_ROOT}" \
+  --qa-root "{ARTIFACTS_ROOT / 'qa'}" \
+  --output "{ARTIFACTS_ROOT / 'handoff' / 'stratlake_marketlake_handoff.json'}"
+```
+
+Installed console script (equivalent):
+
+```python
+!fintech-stratlake-handoff-report \
+  --root "{FINTECH_ROOT}" \
+  --curated-root "{CURATED_ROOT}" \
+  --qa-root "{ARTIFACTS_ROOT / 'qa'}" \
+  --output "{ARTIFACTS_ROOT / 'handoff' / 'stratlake_marketlake_handoff.json'}"
+```
+
+The report is derived and non-canonical. It does not run ingestion, QA,
+restore, archive pack creation, network calls, or StratLake workflows.
+
 Live Alpaca backfills require credentials and network access. Drive save,
 restore, and archive steps require an already-mounted Drive path. Defining the
 profile itself is CI-safe and has no side effects.

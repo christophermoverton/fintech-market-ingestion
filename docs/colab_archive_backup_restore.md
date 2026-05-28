@@ -17,11 +17,13 @@ The restore-first Colab pattern is:
 5. Validate and inspect a backup pack on mounted Drive before restore.
 6. Restore curated data into local runtime storage at `CURATED_ROOT`.
 7. Run post-restore QA against local restored curated data before handoff.
-8. Review QA artifacts and decide block-versus-warn readiness for downstream
-  use.
-9. Run local feature, analysis, or downstream handoff workflows against local
-  files.
-10. Optionally create a fresh backup pack back to mounted Drive when finished.
+8. Generate a local StratLake handoff report from restored/backfilled curated
+  data.
+9. Review QA and handoff artifacts and decide block-versus-warn readiness for
+  downstream use.
+10. Run local feature, analysis, or downstream handoff workflows against local
+   files.
+11. Optionally create a fresh backup pack back to mounted Drive when finished.
 
 Local partitioned Parquet remains the canonical working dataset after restore.
 Archive backup packs are derived, non-canonical transfer artifacts.
@@ -313,7 +315,66 @@ print(f"Restored local curated root: {CURATED_ROOT}")
 print(f"Use as StratLake MARKETLAKE_ROOT: {CURATED_ROOT}")
 ```
 
-### 8. Run Local Workflows
+### 8. Generate A StratLake Handoff Report
+
+After post-restore QA, generate a deterministic local handoff summary for
+StratLake consumers. The report is derived and non-canonical; local partitioned
+Parquet remains canonical.
+
+Run from the local workspace root:
+
+```python
+%cd {FINTECH_ROOT}
+```
+
+Module CLI:
+
+```python
+!python -m src.cli.stratlake_handoff_report \
+  --root "{FINTECH_ROOT}" \
+  --curated-root "{CURATED_ROOT}" \
+  --qa-root "{ARTIFACTS_ROOT / 'qa'}" \
+  --output "{ARTIFACTS_ROOT / 'handoff' / 'stratlake_marketlake_handoff.json'}"
+```
+
+Installed console script (equivalent):
+
+```python
+!fintech-stratlake-handoff-report \
+  --root "{FINTECH_ROOT}" \
+  --curated-root "{CURATED_ROOT}" \
+  --qa-root "{ARTIFACTS_ROOT / 'qa'}" \
+  --output "{ARTIFACTS_ROOT / 'handoff' / 'stratlake_marketlake_handoff.json'}"
+```
+
+Python API:
+
+```python
+from src.handoff import build_stratlake_handoff_report, write_stratlake_handoff_report
+
+report = build_stratlake_handoff_report(
+    root=FINTECH_ROOT,
+    curated_root=CURATED_ROOT,
+    qa_root=ARTIFACTS_ROOT / "qa",
+)
+output_path = write_stratlake_handoff_report(
+    report,
+    output_path=ARTIFACTS_ROOT / "handoff" / "stratlake_marketlake_handoff.json",
+)
+print(output_path)
+print(report["stratlake_marketlake_root"])
+```
+
+The handoff report helps answer:
+
+- which local curated root StratLake should consume;
+- which datasets/timeframes/symbols/date ranges are present;
+- whether QA artifacts are available and where they live.
+
+The report does not run ingestion, QA, archive pack restore/creation, Google
+APIs, OAuth, or StratLake execution.
+
+### 9. Run Local Workflows
 
 After restore, point ingestion, feature, QA, or analysis commands at the local
 workspace and local dataset root. Avoid using the mounted Drive backup folder as
@@ -334,7 +395,7 @@ When running in Colab, those paths should resolve under:
 /content/fintech-market-ingestion-demo
 ```
 
-### 9. Dry-Run A New Backup Pack
+### 10. Dry-Run A New Backup Pack
 
 At the end of a session, preview a new pack before writing archives to Drive.
 
@@ -346,7 +407,7 @@ At the end of a session, preview a new pack before writing archives to Drive.
   --dry-run
 ```
 
-### 10. Create A Fresh Backup Pack To Drive
+### 11. Create A Fresh Backup Pack To Drive
 
 Create the backup pack only after local processing is complete and the local
 dataset is in the state you want to checkpoint.
