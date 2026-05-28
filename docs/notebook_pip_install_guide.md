@@ -145,6 +145,19 @@ Restore does not overwrite existing files unless `--force` is passed. Curated
 data is excluded from saves by default. Use `--dry-run` before saving to a
 mounted Drive path, especially before any curated-data policy.
 
+After initializing the workspace, switch the notebook current directory to the
+profile root before running commands that rely on workspace-relative `.env`
+loading or default paths:
+
+```python
+%cd {FINTECH_ROOT}
+```
+
+Live Alpaca commands load `.env` from the current working directory. In a
+profile-driven Colab notebook, run credential-loaded ingestion and backfill
+commands from `FINTECH_ROOT` unless you have already populated the environment
+through another secure mechanism.
+
 For a runnable local notebook-style walkthrough that uses only tiny synthetic
 files:
 
@@ -192,7 +205,8 @@ delay. Use `sip` for real-time consolidated tape (requires a paid Alpaca
 subscription).
 
 The commands below automatically load `.env` from the current working
-directory via `python-dotenv`.
+directory via `python-dotenv`. In the profile-driven Colab flow above, that
+means running live Alpaca commands after `%cd {FINTECH_ROOT}`.
 
 ---
 
@@ -384,13 +398,11 @@ print(df_1m)
 ## 9. QA, Archive, and StratLake Handoff Examples
 
 The framework-level QA export currently reads the standard workspace-relative
-`data/curated/...` layout. In Colab, switch to `FINTECH_ROOT` first, then feed
-the profile values for the date window, expected symbols file, timeframe, and
-artifact root:
+`data/curated/...` layout. In Colab, this assumes the notebook is already
+running from `FINTECH_ROOT`; feed the profile values for the date window,
+expected symbols file, timeframe, and artifact root:
 
 ```python
-%cd {FINTECH_ROOT}
-
 !python -m src.ingestion.qa_export \
   --timeframe "{QA_TIMEFRAME}" \
   --start "{START}" \
@@ -482,7 +494,11 @@ Check that `ALPACA_API_KEY_ID` and `ALPACA_API_SECRET_KEY` are set:
 import os
 from dotenv import load_dotenv
 load_dotenv()
-print(os.environ.get("ALPACA_API_KEY_ID", "NOT SET"))
+print("ALPACA_API_KEY_ID:", "SET" if os.environ.get("ALPACA_API_KEY_ID") else "NOT SET")
+print(
+    "ALPACA_API_SECRET_KEY:",
+    "SET" if os.environ.get("ALPACA_API_SECRET_KEY") else "NOT SET",
+)
 ```
 
 ### Missing symbols file
