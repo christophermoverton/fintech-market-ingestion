@@ -6,6 +6,25 @@ For **pip-install and notebook usage**, including Colab-ready `fintech-init-proj
 
 ---
 
+## Release 0.11.0 Highlights
+
+Version `0.11.0` finalizes M11 Colab notebook ergonomics and fintech-side
+handoff readiness workflows for StratLake consumers while preserving local
+Parquet canonicality.
+
+* Reusable Colab data-session profile and end-to-end fintech lifecycle docs.
+* `fintech-init-project --colab-profile` for Colab runtime workspace bootstrap.
+* Read-only `fintech-notebook-doctor` checks for pre/post restore readiness.
+* Post-restore QA recipe for local curated datasets.
+* Derived/non-canonical `fintech-stratlake-handoff-report` CLI and API.
+* Deterministic handoff-report default metadata (`generated_at_utc = null`).
+* Deterministic lexical QA-run selection note for handoff artifact references.
+* M11 release-readiness and merge-readiness documentation.
+
+Boundary preserved: local partitioned Parquet remains canonical working data,
+Google Drive remains mounted filesystem persistence/archive storage, and archive
+packs plus handoff metadata remain derived/non-canonical artifacts.
+
 ## Release 0.10.0 Highlights
 
 Version `0.10.0` finalizes M10 archive backup packs and Colab restore workflows while preserving local Parquet canonicality.
