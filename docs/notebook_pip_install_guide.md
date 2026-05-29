@@ -4,6 +4,11 @@ This guide is for users who install `fintech-market-ingestion` via `pip` and
 want to run backfill commands from JupyterLab, a notebook, or a clean project
 folder — without checking out the full repository.
 
+For the full fintech-side M11 lifecycle from Colab bootstrap through restore or
+optional backfill, dataset checks, QA, and StratLake handoff metadata, see
+[m11_colab_fintech_to_stratlake_workflow.md](m11_colab_fintech_to_stratlake_workflow.md)
+and [m11_release_readiness.md](m11_release_readiness.md).
+
 ---
 
 ## 1. Install the Package
@@ -20,7 +25,51 @@ pip install git+https://github.com/christophermoverton/fintech-market-ingestion.
 
 ---
 
-## 2. Bootstrap a Local Workspace
+## 2. Define a Colab Data-Session Profile
+
+In Colab, define one small profile cell before running project setup, restore,
+backfill, QA, or handoff cells. The profile is runtime configuration only: it
+does not create files, mutate `.env`, update `os.environ`, mount Google Drive,
+restore archives, write curated data, or create project-session metadata.
+
+```python
+from pathlib import Path
+
+FINTECH_ROOT = Path("/content/fintech-market-ingestion-demo").resolve()
+CURATED_ROOT = FINTECH_ROOT / "data" / "curated"
+RESEARCH_ROOT = FINTECH_ROOT / "data" / "research"
+ARTIFACTS_ROOT = FINTECH_ROOT / "artifacts"
+REPORTS_ROOT = FINTECH_ROOT / "reports"
+
+DRIVE_ROOT = Path("/content/drive/MyDrive/fintech-market-ingestion").resolve()
+SESSION_EXPORT_ROOT = DRIVE_ROOT / "sessions" / "colab-demo"
+BACKUP_PACK_ROOT = DRIVE_ROOT / "backups"
+BACKUP_PACK_ID = "backup_example"
+BACKUP_PACK_DIR = BACKUP_PACK_ROOT / BACKUP_PACK_ID
+
+START = "2024-10-01"
+END = "2025-04-15"
+TIMEFRAME = "1Day"
+SYMBOLS = ["AAPL", "MSFT"]
+
+SYMBOLS_PATH = FINTECH_ROOT / "configs" / "profile_symbols.txt"
+QA_TIMEFRAME = "1D" if TIMEFRAME == "1Day" else "1Min"
+STRATLAKE_MARKETLAKE_ROOT = CURATED_ROOT
+```
+
+Use `/content/...` for the local runtime workspace and
+`/content/drive/MyDrive/...` for already-mounted Drive persistence. Local
+partitioned Parquet under `CURATED_ROOT` remains the canonical working data.
+Mounted Drive paths are persistence or archive locations only, and archive
+backup packs remain derived, non-canonical transfer artifacts.
+
+`CURATED_ROOT` is the local root StratLake should consume as `MARKETLAKE_ROOT`
+or `--marketlake-root` after restore or ingestion has populated the local
+dataset.
+
+---
+
+## 3. Bootstrap a Local Workspace
 
 After installing, create a local workspace with sample config files and the
 standard directory layout:
@@ -41,6 +90,35 @@ reports/                     ← failure reports (CSV)
 artifacts/                   ← QA run artifacts
 .env.example                 ← credential template
 ```
+
+For a fresh Colab runtime, use the profile root and request the Colab-ready
+workspace shape in one initialization command:
+
+```python
+!fintech-init-project \
+  --root "{FINTECH_ROOT}" \
+  --colab-profile \
+  --with-session \
+  --session-name colab-market-data
+```
+
+That creates:
+
+```text
+configs/
+data/curated/
+data/research/
+artifacts/
+reports/
+notebooks/
+.env.example
+configs/tickers_sample.txt
+```
+
+`--colab-profile` only creates local runtime directories and generated sample
+files. It does not run ingestion, QA, save, restore, archive backup, persistence
+adapters, Google Drive mounting, Google APIs, OAuth, network calls, or
+credential handling.
 
 To also create a `notebooks/` directory:
 
@@ -75,24 +153,88 @@ For mounted-path Google Drive persistence boundaries, see
 Drive to already be mounted and does not use Google APIs or authenticate.
 Explicit save/restore commands are available once you have a session ID:
 
-```bash
-fintech-save-session \
-  --root /content/fintech-market-ingestion-demo \
-  --session-id <session_id> \
-  --policy artifacts_and_reports \
-  --adapter local \
-  --destination /content/fintech-session-export
+```python
+!fintech-init-project \
+  --root "{FINTECH_ROOT}" \
+  --colab-profile \
+  --with-session \
+  --session-name colab-market-data
 
-fintech-restore-session \
-  --root /content/fintech-restore-check \
-  --adapter local \
-  --source /content/fintech-session-export \
+!fintech-save-session \
+  --root "{FINTECH_ROOT}" \
+  --session-id "<session_id>" \
+  --policy artifacts_and_reports \
+  --adapter google-drive \
+  --destination "{SESSION_EXPORT_ROOT}" \
+  --dry-run
+
+!fintech-restore-session \
+  --root "{FINTECH_ROOT / 'restore_dry_run_check'}" \
+  --adapter google-drive \
+  --source "{SESSION_EXPORT_ROOT}" \
   --dry-run
 ```
 
 Restore does not overwrite existing files unless `--force` is passed. Curated
 data is excluded from saves by default. Use `--dry-run` before saving to a
 mounted Drive path, especially before any curated-data policy.
+
+After initializing the workspace, switch the notebook current directory to the
+profile root before running commands that rely on workspace-relative `.env`
+loading or default paths:
+
+```python
+%cd {FINTECH_ROOT}
+```
+
+Before expensive restore, QA, ingestion, or handoff cells, run the read-only
+notebook doctor pre-restore check to validate local roots, mounted Drive path
+reachability, archive root reachability, optional credential presence, and
+restore-target safety:
+
+```python
+!fintech-notebook-doctor \
+  --root "{FINTECH_ROOT}" \
+  --drive-root "{DRIVE_ROOT}" \
+  --archive-root "{BACKUP_PACK_ROOT}" \
+  --check-archive-root \
+  --check-secrets \
+  --restore-root "{CURATED_ROOT}"
+```
+
+Use `--expect-dataset` after restore or after local backfill when those
+datasets are expected to exist. Missing expected datasets intentionally produce
+`fail` status.
+
+```python
+!fintech-notebook-doctor \
+  --root "{FINTECH_ROOT}" \
+  --check-curated-root \
+  --expect-dataset bars_daily \
+  --expect-dataset bars_1m
+```
+
+JSON-only output for deterministic notebook automation (post-restore example):
+
+```python
+!fintech-notebook-doctor \
+  --root "{FINTECH_ROOT}" \
+  --check-curated-root \
+  --expect-dataset bars_daily \
+  --json
+```
+
+`fintech-notebook-doctor` is strictly read-only. It does not mount Drive,
+authenticate, call Google APIs, validate archive checksums, restore files,
+run ingestion, run QA, create archive packs, run save/restore adapters,
+mutate `.env` or `os.environ`, mutate curated/research data, or execute
+StratLake workflows. Secret checks only report `SET` / `NOT SET` and never
+print secret values.
+
+Live Alpaca commands load `.env` from the current working directory. In a
+profile-driven Colab notebook, run credential-loaded ingestion and backfill
+commands from `FINTECH_ROOT` unless you have already populated the environment
+through another secure mechanism.
 
 For a runnable local notebook-style walkthrough that uses only tiny synthetic
 files:
@@ -120,7 +262,7 @@ you have written to `data/`, `reports/`, or `artifacts/`.
 
 ---
 
-## 3. Configure Alpaca Credentials
+## 4. Configure Alpaca Credentials
 
 Copy the example file and fill in your credentials:
 
@@ -141,11 +283,12 @@ delay. Use `sip` for real-time consolidated tape (requires a paid Alpaca
 subscription).
 
 The commands below automatically load `.env` from the current working
-directory via `python-dotenv`.
+directory via `python-dotenv`. In the profile-driven Colab flow above, that
+means running live Alpaca commands after `%cd {FINTECH_ROOT}`.
 
 ---
 
-## 4. Edit Your Symbol List
+## 5. Edit Your Symbol List
 
 `configs/tickers_sample.txt` contains 10 symbols by default. Edit it to use
 the symbols you need:
@@ -161,9 +304,17 @@ GOOGL
 
 Lines that start with `#` are treated as comments and ignored.
 
+In a profile-driven notebook, create the symbol file explicitly after
+`fintech-init-project` has created `configs/`:
+
+```python
+SYMBOLS_PATH.parent.mkdir(parents=True, exist_ok=True)
+SYMBOLS_PATH.write_text("\n".join(SYMBOLS) + "\n", encoding="utf-8")
+```
+
 ---
 
-## 5. Daily Backfill
+## 6. Daily Backfill
 
 ### Minimal Example — Q1 2025, sample symbol list
 
@@ -175,6 +326,18 @@ fintech-backfill-daily \
   --start 2025-01-01 \
   --end 2025-04-01 \
   --out data/curated/bars_daily \
+  --feed iex \
+  --window month
+```
+
+Profile-driven Colab equivalent for `TIMEFRAME = "1Day"`:
+
+```python
+!fintech-backfill-daily \
+  --symbols "{SYMBOLS_PATH}" \
+  --start "{START}" \
+  --end "{END}" \
+  --out "{CURATED_ROOT / 'bars_daily'}" \
   --feed iex \
   --window month
 ```
@@ -216,7 +379,7 @@ python -m src.ingestion.backfill_daily \
 
 ---
 
-## 6. 1-Minute Backfill
+## 7. 1-Minute Backfill
 
 ### Smoke Test — 1 Day, Small Symbol List
 
@@ -228,6 +391,19 @@ fintech-backfill-1m \
   --start 2025-01-02 \
   --end 2025-01-03 \
   --out data/curated/bars_1m \
+  --feed iex \
+  --sleep-ms 200 \
+  --no-progress
+```
+
+Profile-driven Colab equivalent for `TIMEFRAME = "1Min"`:
+
+```python
+!fintech-backfill-1m \
+  --symbols "{SYMBOLS_PATH}" \
+  --start "{START}" \
+  --end "{END}" \
+  --out "{CURATED_ROOT / 'bars_1m'}" \
   --feed iex \
   --sleep-ms 200 \
   --no-progress
@@ -259,7 +435,7 @@ python -m src.ingestion.backfill_1m \
 
 ---
 
-## 7. DuckDB Spot-Check
+## 8. DuckDB Spot-Check
 
 After a successful backfill, verify the output with DuckDB:
 
@@ -269,9 +445,9 @@ import duckdb
 conn = duckdb.connect()
 
 # Daily bars — Q1 2025
-df = conn.execute("""
+df = conn.execute(f"""
     SELECT symbol, COUNT(*) AS rows, MIN(ts_utc) AS first_bar, MAX(ts_utc) AS last_bar
-    FROM read_parquet('data/curated/bars_daily/**/*.parquet', hive_partitioning=true)
+    FROM read_parquet('{CURATED_ROOT.as_posix()}/bars_daily/**/*.parquet', hive_partitioning=true)
     WHERE ts_utc >= TIMESTAMP '2025-01-01'
       AND ts_utc < TIMESTAMP '2025-04-01'
     GROUP BY symbol
@@ -283,9 +459,9 @@ print(df)
 
 ```python
 # 1-minute bars — AAPL on 2025-01-02
-df_1m = conn.execute("""
+df_1m = conn.execute(f"""
     SELECT *
-    FROM read_parquet('data/curated/bars_1m/**/*.parquet', hive_partitioning=true)
+    FROM read_parquet('{CURATED_ROOT.as_posix()}/bars_1m/**/*.parquet', hive_partitioning=true)
     WHERE symbol = 'AAPL'
       AND date = '2025-01-02'
     ORDER BY ts_utc
@@ -297,7 +473,95 @@ print(df_1m)
 
 ---
 
-## 8. Workspace Layout Reference
+## 9. QA, Archive, and StratLake Handoff Examples
+
+The framework-level QA export currently reads the standard workspace-relative
+`data/curated/...` layout. In Colab, this assumes the notebook is already
+running from `FINTECH_ROOT`; feed the profile values for the date window,
+expected symbols file, timeframe, and artifact root:
+
+```python
+!python -m src.ingestion.qa_export \
+  --timeframe "{QA_TIMEFRAME}" \
+  --start "{START}" \
+  --end "{END}" \
+  --symbols "{SYMBOLS_PATH}" \
+  --out "{ARTIFACTS_ROOT / 'qa'}"
+```
+
+Archive backup pack commands should use mounted Drive only for the pack
+location and local runtime storage for the active dataset root:
+
+```python
+!fintech-backup-data validate \
+  --backup-pack-dir "{BACKUP_PACK_DIR}"
+
+!fintech-backup-data restore \
+  --backup-pack-dir "{BACKUP_PACK_DIR}" \
+  --restore-root "{CURATED_ROOT}" \
+  --overwrite-policy fail
+
+!fintech-backup-data pack \
+  --workspace-root "{FINTECH_ROOT}" \
+  --source-dataset-root "{CURATED_ROOT}" \
+  --backup-root "{BACKUP_PACK_ROOT}" \
+  --backup-id "backup_after_session" \
+  --shard-size-mb 512
+```
+
+For the full restore-first Colab sequence, including Drive mount setup,
+validate/inspect-before-restore guidance, overwrite policy choices, and archive
+packs versus project-session save/restore, see
+[colab_archive_backup_restore.md](colab_archive_backup_restore.md).
+
+For StratLake Trade Engine handoff, declare the local curated root rather than
+the Drive backup folder:
+
+```python
+print(f"MARKETLAKE_ROOT={STRATLAKE_MARKETLAKE_ROOT}")
+```
+
+```text
+CURATED_ROOT is the local root StratLake should consume as MARKETLAKE_ROOT or --marketlake-root.
+```
+
+Generate a deterministic local handoff summary after restore or backfill:
+
+```python
+!python -m src.cli.stratlake_handoff_report \
+  --root "{FINTECH_ROOT}" \
+  --curated-root "{CURATED_ROOT}" \
+  --qa-root "{ARTIFACTS_ROOT / 'qa'}" \
+  --output "{ARTIFACTS_ROOT / 'handoff' / 'stratlake_marketlake_handoff.json'}"
+```
+
+Installed console script (equivalent):
+
+```python
+!fintech-stratlake-handoff-report \
+  --root "{FINTECH_ROOT}" \
+  --curated-root "{CURATED_ROOT}" \
+  --qa-root "{ARTIFACTS_ROOT / 'qa'}" \
+  --output "{ARTIFACTS_ROOT / 'handoff' / 'stratlake_marketlake_handoff.json'}"
+```
+
+The report is derived and non-canonical. It does not run ingestion, QA,
+restore, archive pack creation, network calls, or StratLake workflows.
+
+By default, the report writes `generated_at_utc` as `null` for deterministic
+output when local filesystem inputs are unchanged. Provide
+`--generated-at-utc` only when you want timestamp metadata in the report.
+
+If QA artifacts exist, QA run selection uses deterministic lexical ordering of
+QA run directory names.
+
+Live Alpaca backfills require credentials and network access. Drive save,
+restore, and archive steps require an already-mounted Drive path. Defining the
+profile itself is CI-safe and has no side effects.
+
+---
+
+## 10. Workspace Layout Reference
 
 The table below summarises which files belong to the installed package and
 which are local to your workspace:
@@ -307,9 +571,10 @@ which are local to your workspace:
 | `configs/` | **Local workspace** | Created by `fintech-init-project` |
 | `configs/tickers_sample.txt` | **Local workspace** | Editable symbol list |
 | `data/` | **Local workspace** | Parquet datasets |
+| `data/research/` | **Local workspace** | Derived research outputs; created with `--colab-profile` or by research workflows |
 | `reports/` | **Local workspace** | Failure CSV files |
 | `artifacts/` | **Local workspace** | QA run artifacts |
-| `notebooks/` | **Local workspace** | Optional; created with `--notebooks` |
+| `notebooks/` | **Local workspace** | Optional; created with `--notebooks` or `--colab-profile` |
 | `.env` | **Local workspace** | Credentials — never commit |
 | `.env.example` | **Local workspace** | Credential template |
 | Installed scripts | **Package** | `fintech-backfill-daily`, etc. |
@@ -317,7 +582,7 @@ which are local to your workspace:
 
 ---
 
-## 9. Troubleshooting
+## 11. Troubleshooting
 
 ### Wrong working directory
 
@@ -343,7 +608,11 @@ Check that `ALPACA_API_KEY_ID` and `ALPACA_API_SECRET_KEY` are set:
 import os
 from dotenv import load_dotenv
 load_dotenv()
-print(os.environ.get("ALPACA_API_KEY_ID", "NOT SET"))
+print("ALPACA_API_KEY_ID:", "SET" if os.environ.get("ALPACA_API_KEY_ID") else "NOT SET")
+print(
+    "ALPACA_API_SECRET_KEY:",
+    "SET" if os.environ.get("ALPACA_API_SECRET_KEY") else "NOT SET",
+)
 ```
 
 ### Missing symbols file
@@ -377,13 +646,14 @@ If the command completes but writes no Parquet files, check:
 
 ---
 
-## 10. Available Console Scripts
+## 12. Available Console Scripts
 
 | Command | Description |
 |---------|-------------|
 | `fintech-init-project` | Bootstrap a local workspace |
 | `fintech-save-session` | Save selected session files to a persistence target |
 | `fintech-restore-session` | Restore selected files from a persistence target |
+| `fintech-notebook-doctor` | Run read-only notebook readiness checks |
 | `fintech-backfill-daily` | Backfill daily OHLCV bars |
 | `fintech-backfill-1m` | Backfill 1-minute OHLCV bars |
 | `fintech-ingest-corporate-actions` | Ingest dividend / corporate-action events |

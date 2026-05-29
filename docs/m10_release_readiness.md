@@ -109,7 +109,7 @@ bytes so no Parquet engine is required for archive-pack validation.
 The documented Colab workflow should keep this order:
 
 1. Mount Drive manually only if the notebook needs it.
-2. Work under local runtime storage such as `/content/fintech-market-ingestion`.
+2. Work under local runtime storage such as `/content/fintech-market-ingestion-demo`.
 3. Validate and inspect the Drive-hosted backup pack.
 4. Restore into local runtime storage such as `data/curated`.
 5. Run local ingestion, feature, QA, or analysis workflows.

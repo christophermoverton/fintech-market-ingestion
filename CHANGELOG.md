@@ -5,6 +5,40 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.11.0] - Colab Notebook Ergonomics, QA, Doctor, and StratLake Handoff - 2026-05-29
+
+### Added
+
+- **M11: Colab Notebook Ergonomics, Drive persistence patterns, archive restore flow, QA, and handoff readiness**
+  - documented reusable Colab data-session profile and end-to-end fintech-side lifecycle guide
+  - `fintech-init-project --colab-profile` workspace bootstrap flow for Colab runtime roots
+  - read-only `fintech-notebook-doctor` CLI for workspace/curated/archive/secret readiness checks
+  - restore-first archive backup workflow documentation for local-runtime canonical data usage
+  - post-restore QA validation recipe for local curated data
+  - derived/non-canonical StratLake handoff report CLI and API surface
+  - deterministic default handoff report behavior (`generated_at_utc = null` unless explicitly provided)
+  - deterministic lexical QA run selection note for handoff report references
+  - M11 release-readiness and merge-readiness documentation
+
+### Preserved Boundary
+
+- Local partitioned Parquet remains canonical working data after restore/backfill.
+- Mounted Google Drive remains filesystem persistence/archive storage only.
+- Archive backup packs remain derived/non-canonical transfer artifacts.
+- Handoff reports remain derived/non-canonical diagnostic metadata.
+- Notebook doctor remains read-only and never mutates `.env`, `os.environ`, Drive content, archive packs, curated data, or session metadata.
+- Package code does not add hidden sync, Google API/OAuth calls, automatic Drive mount behavior, restore automation, background sync, or StratLake execution behavior.
+
+### Validation
+
+- `git diff --check` passing.
+- `python scripts/check_repo_hygiene.py` passing.
+- `python scripts/validate.py` passing.
+- `python examples/project_session_quickstart.py --output-root .pytest_tmp_m11_merge_readiness_quickstart` passing.
+- Command-surface help checks for M11 CLIs passing.
+- Full test suite passing (`pytest tests -q`).
+- No `.pytest_tmp*` merge-readiness output tracked in Git.
+
 ## [0.10.0] - Archive Backup Packs and Colab Restore Workflow - 2026-05-26
 
 ### Added

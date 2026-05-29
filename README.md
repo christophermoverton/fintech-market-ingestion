@@ -2,9 +2,28 @@
 
 A production-style market data ingestion and validation framework for historical OHLCV bars (Daily + 1-Minute) using Alpaca market data. The pipeline writes curated, partitioned Parquet datasets and provides a structured QA layer with artifact-based observability and optional strict enforcement suitable for CI gating and trading research workflows.
 
-For **pip-install and notebook usage**, see [docs/notebook_pip_install_guide.md](docs/notebook_pip_install_guide.md). For portable project-session boundaries and mounted-path persistence, see [docs/project_sessions.md](docs/project_sessions.md), [docs/google_drive_persistence.md](docs/google_drive_persistence.md), [examples/project_session_quickstart.py](examples/project_session_quickstart.py), and [docs/m9_release_readiness.md](docs/m9_release_readiness.md). For the M10 archive backup pack manifest contract, see [docs/archive_backup_pack_manifest.md](docs/archive_backup_pack_manifest.md); for the Colab restore-to-local workflow with mounted Google Drive archival storage, see [docs/colab_archive_backup_restore.md](docs/colab_archive_backup_restore.md); for focused M10 validation, see [docs/m10_release_readiness.md](docs/m10_release_readiness.md). For cross-platform contributor setup and validation, see [docs/cross_platform_contributor_validation.md](docs/cross_platform_contributor_validation.md). For setup, packaging, linting, build validation, and future publishing boundaries, see [docs/packaging_pypi_readiness.md](docs/packaging_pypi_readiness.md). For the focused M7 release checklist, see [docs/m7_release_readiness.md](docs/m7_release_readiness.md). For the focused M5 release checklist, see [docs/m5_release_readiness.md](docs/m5_release_readiness.md). For the focused M4 validation checklist, see [docs/m4_release_readiness.md](docs/m4_release_readiness.md).
+For **pip-install and notebook usage**, including Colab-ready `fintech-init-project --colab-profile` setup, the Colab data-session profile for local runtime roots, mounted Drive persistence roots, archive roots, date windows, timeframes, symbols, and StratLake handoff via `CURATED_ROOT`, see [docs/notebook_pip_install_guide.md](docs/notebook_pip_install_guide.md). For a complete fintech-side lifecycle from fresh Colab runtime to StratLake handoff metadata, see [docs/m11_colab_fintech_to_stratlake_workflow.md](docs/m11_colab_fintech_to_stratlake_workflow.md) and [docs/m11_release_readiness.md](docs/m11_release_readiness.md). That guide also includes `fintech-notebook-doctor`, a read-only readiness command that checks workspace roots, optional mounted Drive/archive paths, likely restored datasets, and optional secret presence (SET/NOT SET only). For portable project-session boundaries and mounted-path persistence, see [docs/project_sessions.md](docs/project_sessions.md), [docs/google_drive_persistence.md](docs/google_drive_persistence.md), [examples/project_session_quickstart.py](examples/project_session_quickstart.py), and [docs/m9_release_readiness.md](docs/m9_release_readiness.md). For the M10 archive backup pack manifest contract, see [docs/archive_backup_pack_manifest.md](docs/archive_backup_pack_manifest.md); for the Colab restore-to-local workflow with mounted Google Drive archival storage, see [docs/colab_archive_backup_restore.md](docs/colab_archive_backup_restore.md); for focused M10 validation, see [docs/m10_release_readiness.md](docs/m10_release_readiness.md). For cross-platform contributor setup and validation, see [docs/cross_platform_contributor_validation.md](docs/cross_platform_contributor_validation.md). For setup, packaging, linting, build validation, and future publishing boundaries, see [docs/packaging_pypi_readiness.md](docs/packaging_pypi_readiness.md). For the focused M7 release checklist, see [docs/m7_release_readiness.md](docs/m7_release_readiness.md). For the focused M5 release checklist, see [docs/m5_release_readiness.md](docs/m5_release_readiness.md). For the focused M4 validation checklist, see [docs/m4_release_readiness.md](docs/m4_release_readiness.md).
 
 ---
+
+## Release 0.11.0 Highlights
+
+Version `0.11.0` finalizes M11 Colab notebook ergonomics and fintech-side
+handoff readiness workflows for StratLake consumers while preserving local
+Parquet canonicality.
+
+* Reusable Colab data-session profile and end-to-end fintech lifecycle docs.
+* `fintech-init-project --colab-profile` for Colab runtime workspace bootstrap.
+* Read-only `fintech-notebook-doctor` checks for pre/post restore readiness.
+* Post-restore QA recipe for local curated datasets.
+* Derived/non-canonical `fintech-stratlake-handoff-report` CLI and API.
+* Deterministic handoff-report default metadata (`generated_at_utc = null`).
+* Deterministic lexical QA-run selection note for handoff artifact references.
+* M11 release-readiness and merge-readiness documentation.
+
+Boundary preserved: local partitioned Parquet remains canonical working data,
+Google Drive remains mounted filesystem persistence/archive storage, and archive
+packs plus handoff metadata remain derived/non-canonical artifacts.
 
 ## Release 0.10.0 Highlights
 
@@ -495,6 +514,46 @@ In trading and backtesting systems:
 * Coverage gaps can bias signal evaluation
 
 The `qa_export` CLI formalizes dataset observability and enables production-grade guardrails before any modeling or execution layer consumes the data.
+
+---
+
+## StratLake Handoff Report
+
+After local restore, local backfill, or post-restore QA, generate a deterministic
+local handoff report that summarizes curated dataset presence, symbols, date
+coverage, timeframe coverage, and QA artifact references.
+
+```bash
+python -m src.cli.stratlake_handoff_report \
+  --root . \
+  --curated-root data/curated \
+  --qa-root artifacts/qa \
+  --output artifacts/handoff/stratlake_marketlake_handoff.json
+```
+
+Installed console script:
+
+```bash
+fintech-stratlake-handoff-report \
+  --root . \
+  --curated-root data/curated \
+  --qa-root artifacts/qa \
+  --output artifacts/handoff/stratlake_marketlake_handoff.json
+```
+
+Use `stratlake_marketlake_root` from the generated JSON as StratLake
+`MARKETLAKE_ROOT` or `--marketlake-root`.
+
+By default, `generated_at_utc` is `null`, which keeps the JSON deterministic
+for unchanged local filesystem inputs. Pass `--generated-at-utc` only when you
+want explicit timestamp metadata in the report.
+
+If QA artifacts are present, the selected QA run is chosen by deterministic
+lexical ordering of QA run directory names.
+
+Boundary: the report is derived/non-canonical diagnostics. It does not run
+ingestion, QA, archive restore/pack, Google API/OAuth, network operations, or
+StratLake execution workflows.
 
 ---
 
