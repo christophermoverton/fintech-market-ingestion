@@ -106,6 +106,14 @@ Non-blocking note:
 
 M11 is ready for PR to `main` pending normal reviewer approval.
 
+## Release Identity
+
+- Canonical package version: `0.11.0`.
+- Release tag: `v0.11.0-colab-notebook-ergonomics-qa-doctor-stratlake-handoff`.
+- Release title: `v0.11.0 - Colab Notebook Ergonomics, QA, Doctor, and StratLake Handoff`.
+- Release branch: `feature/m11-colab-data-sessions-archive-restore-ux`.
+- Target branch: `main`.
+
 ## PR Draft
 
 ### Title
