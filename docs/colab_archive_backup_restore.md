@@ -25,6 +25,10 @@ The restore-first Colab pattern is:
   local files.
 11. Optionally create a fresh backup pack back to mounted Drive when finished.
 
+For the full end-to-end M11 fintech-side lifecycle (including optional live
+backfill path, post-restore doctor checks, QA, and handoff metadata), see
+[m11_colab_fintech_to_stratlake_workflow.md](m11_colab_fintech_to_stratlake_workflow.md).
+
 Local partitioned Parquet remains the canonical working dataset after restore.
 Archive backup packs are derived, non-canonical transfer artifacts.
 

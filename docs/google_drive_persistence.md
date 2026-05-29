@@ -23,6 +23,11 @@ For Colab notebooks, the reusable data-session profile in
 `SESSION_EXPORT_ROOT` under `DRIVE_ROOT`. Defining that profile has no side
 effects and does not make Drive canonical.
 
+For an end-to-end fintech-side Colab lifecycle that combines mounted-path
+persistence, archive restore-first workflows, doctor checks, QA, and handoff
+metadata, see
+[m11_colab_fintech_to_stratlake_workflow.md](m11_colab_fintech_to_stratlake_workflow.md).
+
 Instantiate the adapter with that mounted path:
 
 ```python

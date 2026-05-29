@@ -4,6 +4,11 @@ This guide is for users who install `fintech-market-ingestion` via `pip` and
 want to run backfill commands from JupyterLab, a notebook, or a clean project
 folder — without checking out the full repository.
 
+For the full fintech-side M11 lifecycle from Colab bootstrap through restore or
+optional backfill, dataset checks, QA, and StratLake handoff metadata, see
+[m11_colab_fintech_to_stratlake_workflow.md](m11_colab_fintech_to_stratlake_workflow.md)
+and [m11_release_readiness.md](m11_release_readiness.md).
+
 ---
 
 ## 1. Install the Package

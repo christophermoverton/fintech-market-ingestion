@@ -6,6 +6,10 @@ A session manifest describes an initialized workspace, package/runtime metadata,
 workspace-relative project paths, selected persistence adapter settings, and an
 explicit save policy.
 
+For the full M11 fintech-side Colab lifecycle and where session save/restore
+fits relative to archive backup packs, doctor checks, QA, and handoff metadata,
+see [m11_colab_fintech_to_stratlake_workflow.md](m11_colab_fintech_to_stratlake_workflow.md).
+
 The manifest is intentionally small. It is JSON, deterministic, and designed to
 move between local folders, notebook runtimes, and mounted filesystems without
 recording machine-local absolute paths in durable fields.
