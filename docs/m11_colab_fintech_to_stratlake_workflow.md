@@ -147,6 +147,10 @@ working data.
 Optional path for live data ingestion. Requires Alpaca credentials and network
 access. Restore-first remains the credential-free path.
 
+These CLIs write directly to the `--out` root you provide, so use
+dataset-specific roots (`bars_daily` and `bars_1m`) rather than the broader
+`CURATED_ROOT` parent.
+
 ```python
 !fintech-backfill-daily \
   --symbols "{SYMBOLS_PATH}" \
@@ -247,12 +251,27 @@ validation are outside this fintech guide.
 Use session save/restore for configs, reports, lightweight artifacts, and
 notebook continuity.
 
+`fintech-save-session` requires an existing project-session manifest for the
+provided session ID, even with `--dry-run`. In this workflow, that session is
+created by `fintech-init-project --with-session --session-name colab-market-data`.
+Use the actual generated `session_id` (not the session name by itself).
+
+Find the newest generated session ID:
+
+```python
+from pathlib import Path
+
+session_dirs = sorted((FINTECH_ROOT / "artifacts" / "sessions").glob("*/"))
+SESSION_ID = session_dirs[-1].name
+SESSION_ID
+```
+
 Dry-run save example:
 
 ```python
 !fintech-save-session \
   --root "{FINTECH_ROOT}" \
-  --session-id "<session_id>" \
+  --session-id "{SESSION_ID}" \
   --policy artifacts_and_reports \
   --adapter google-drive \
   --destination "{DRIVE_ROOT / 'sessions' / 'colab-market-data'}" \
