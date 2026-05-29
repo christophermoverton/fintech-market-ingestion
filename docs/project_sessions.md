@@ -6,6 +6,10 @@ A session manifest describes an initialized workspace, package/runtime metadata,
 workspace-relative project paths, selected persistence adapter settings, and an
 explicit save policy.
 
+For the full M11 fintech-side Colab lifecycle and where session save/restore
+fits relative to archive backup packs, doctor checks, QA, and handoff metadata,
+see [m11_colab_fintech_to_stratlake_workflow.md](m11_colab_fintech_to_stratlake_workflow.md).
+
 The manifest is intentionally small. It is JSON, deterministic, and designed to
 move between local folders, notebook runtimes, and mounted filesystems without
 recording machine-local absolute paths in durable fields.
@@ -63,6 +67,17 @@ Project-session creation is opt-in during workspace bootstrap:
 
 ```bash
 fintech-init-project --root . --notebooks --with-session --session-name demo
+```
+
+For a Colab-ready local workspace with configs, curated data, research data,
+artifacts, reports, notebooks, and optional session metadata:
+
+```bash
+fintech-init-project \
+  --root /content/fintech-market-ingestion-demo \
+  --colab-profile \
+  --with-session \
+  --session-name colab-market-data
 ```
 
 This preserves the normal `fintech-init-project` behavior and additionally
@@ -227,26 +242,29 @@ files under `configs/`, `reports/`, `artifacts/quickstart/`, and
 `data/research/`, saves locally with `--policy artifacts_and_reports`, and runs
 a restore dry-run into a fresh check root.
 
-The equivalent notebook or Colab shell flow is:
+For Colab notebooks, first define the data-session profile in
+[notebook_pip_install_guide.md](notebook_pip_install_guide.md). The equivalent
+profile-driven shell flow is:
 
-```bash
-fintech-init-project \
-  --root /content/fintech-market-ingestion-demo \
-  --notebooks \
+```python
+!fintech-init-project \
+  --root "{FINTECH_ROOT}" \
+  --colab-profile \
   --with-session \
-  --session-name colab-demo
+  --session-name colab-market-data
 
-fintech-save-session \
-  --root /content/fintech-market-ingestion-demo \
-  --session-id <session_id> \
+!fintech-save-session \
+  --root "{FINTECH_ROOT}" \
+  --session-id "<session_id>" \
   --policy artifacts_and_reports \
-  --adapter local \
-  --destination /content/fintech-session-export
+  --adapter google-drive \
+  --destination "{SESSION_EXPORT_ROOT}" \
+  --dry-run
 
-fintech-restore-session \
-  --root /content/fintech-restore-check \
-  --adapter local \
-  --source /content/fintech-session-export \
+!fintech-restore-session \
+  --root "{FINTECH_ROOT / 'restore_dry_run_check'}" \
+  --adapter google-drive \
+  --source "{SESSION_EXPORT_ROOT}" \
   --dry-run
 ```
 

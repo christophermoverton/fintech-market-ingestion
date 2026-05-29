@@ -18,6 +18,16 @@ Then choose a mounted directory for project-session transport artifacts:
 /content/drive/MyDrive/fintech-market-ingestion/<session_name>
 ```
 
+For Colab notebooks, the reusable data-session profile in
+[notebook_pip_install_guide.md](notebook_pip_install_guide.md) defines this as
+`SESSION_EXPORT_ROOT` under `DRIVE_ROOT`. Defining that profile has no side
+effects and does not make Drive canonical.
+
+For an end-to-end fintech-side Colab lifecycle that combines mounted-path
+persistence, archive restore-first workflows, doctor checks, QA, and handoff
+metadata, see
+[m11_colab_fintech_to_stratlake_workflow.md](m11_colab_fintech_to_stratlake_workflow.md).
+
 Instantiate the adapter with that mounted path:
 
 ```python
@@ -92,13 +102,13 @@ drive.mount("/content/drive")
 
 Then preview the export before copying:
 
-```bash
-fintech-save-session \
-  --root /content/fintech-market-ingestion-demo \
-  --session-id <session_id> \
+```python
+!fintech-save-session \
+  --root "{FINTECH_ROOT}" \
+  --session-id "<session_id>" \
   --policy artifacts_and_reports \
   --adapter google-drive \
-  --destination "/content/drive/MyDrive/fintech-market-ingestion/<session_name>" \
+  --destination "{SESSION_EXPORT_ROOT}" \
   --dry-run
 ```
 
